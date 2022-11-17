@@ -103,6 +103,7 @@ class HaxballRoom {
     this.room.onTeamGoal = (team) => {
       this.shouldWatchForIdlePlayers = false;
       const isOwnGoal = team !== this.lastBallKicker?.team;
+      const isMatch = this.room.getPlayerList().some((p) => p.team === 1) && this.room.getPlayerList().some((p) => p.team === 2);
 
       if (isOwnGoal) {
         this.room.sendAnnouncement(`⚽🚨 Magnifique CSC, GG ${this.lastBallKicker?.name} !`, undefined, undefined, "bold", 2);
@@ -117,7 +118,7 @@ class HaxballRoom {
       }
       const interactPlayer = interactPlayers.find((p) => p.sessionId === this.lastBallKicker?.id);
 
-      if (interactPlayer) {
+      if (interactPlayer && isMatch) {
         this.storePlayerStats(interactPlayer, isOwnGoal);
       }
     }
