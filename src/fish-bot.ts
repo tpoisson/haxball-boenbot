@@ -12,6 +12,9 @@ class HaxballRoom {
   private idleTimeout = 7 * 1000;
 
   private room: RoomObject;
+  private currentNbPlayers = 0;
+  
+  private isTrainingMode = false;
 
   constructor(/*db: IDBDatabase*/) {
     this.room = HBInit({
@@ -47,7 +50,7 @@ class HaxballRoom {
       this.playerLastActivities.clear();
     }
     this.room.onGameTick = () => {
-      if (this.shouldWatchForIdlePlayers) {
+      if (this.shouldWatchForIdlePlayers && !this.isTrainingMode) {
         for (const [playerId, playerData] of this.playerLastActivities) {
           if ((new Date().getTime() - playerData.date.getTime()) > this.idleTimeout) {
             const player = this.room.getPlayer(playerId);
@@ -104,11 +107,11 @@ class HaxballRoom {
       }
       const greetingMessage = interactPlayer !== undefined ? this.getGreeting(interactPlayer) : `Bienvenue ${player.name} !`
       this.room.sendAnnouncement(greetingMessage, undefined, 0xFF00FF, "bold", 0);
-      this.updateAdmins();
+      this.playerListChanged(player);
     }
 
     this.room.onPlayerLeave = (player) => {
-      this.updateAdmins();
+      this.playerListChanged();
     }
 
     this.room.onPlayerBallKick = (player) => {
@@ -141,19 +144,32 @@ class HaxballRoom {
 
 
   // If there are no admins left in the room give admin to one of the remaining players.
-  private updateAdmins() {
+  private playerListChanged(newPlayer?: PlayerObject) {
     // Get all players
     const players = this.room.getPlayerList();
     if (players.length === 0) {
       this.room.stopGame();
       return; // No players left, do nothing.
     }
+    if (players.length === 1 && this.currentNbPlayers === 0) {
+      this.changeStadium('training');
+      this.room.setPlayerTeam(players[0].id, 1);
+      this.room.startGame();
+    }
+    if (newPlayer && this.isTrainingMode) {
+      this.room.setPlayerTeam(newPlayer.id, 1);
+    }
+
+    // Admin
     if (players.find((player) => player.admin) != null) return; // There's an admin left so do nothing.
     this.room.setPlayerAdmin(players[0].id, true); // Give admin to the first non admin player in the list
+
+    this.currentNbPlayers = players.length;
   }
 
 
   private changeStadium(type: MapTypes) {
+    this.isTrainingMode = type === 'training';
     const nbPlayers = this.room.getPlayerList().length;
     const stadium = maps
       .filter((map) => map.type === type && map.players >= nbPlayers)
@@ -179,7 +195,6 @@ interface InteractPlayer {
 type MapTypes = 'futsal' | 'classic' | 'sniper' | 'training';
 interface ICustomMap { type: MapTypes; players: number; content: string; }
 interface IPlayerActivity { date: Date; }
-interface IPlayerStats { playerId: string, nbGoals: number, nbOwnGoals: number }
 
 const interactPlayers: InteractPlayer[] = [
   {
