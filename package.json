@@ -1,7 +1,8 @@
 {
   "scripts": {
     "build": "npx tsc",
-    "lint": "npx eslint src/"
+    "lint": "npx eslint src/",
+    "clean": "rm -rf ./build"
   },
   "devDependencies": {
     "@types/haxball-headless-browser": "^0.2.0",
