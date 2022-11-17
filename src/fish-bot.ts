@@ -1,7 +1,39 @@
 // https://github.com/haxball/haxball-issues/wiki/Headless-Host
 
+class IndexedDBInit {
 
+  private db?: IDBDatabase;
 
+  constructor() {
+    const DBOpenRequest = window.indexedDB.open('haxball');
+
+    DBOpenRequest.onerror = (event) => {
+      console.error('DBOpenRequest error', event);
+    };
+    DBOpenRequest.onupgradeneeded = () => {
+      console.info('DB Upgrade needed !');
+      const db = DBOpenRequest.result;
+      const objectStore = db.createObjectStore("stats", {
+        autoIncrement: false 
+      });
+      objectStore.createIndex('nbGoals', 'nbGoals', { unique: false });
+      objectStore.createIndex('nbOwnGoals', 'nbOwnGoals', { unique: false });
+    }
+    DBOpenRequest.onsuccess = () => {
+      console.info('DB initialized !');
+      this.db = DBOpenRequest.result;
+      this.db.onerror = (event) => {
+        // Generic error handler for all errors targeted at this database's
+        // requests!
+        console.error(`Database error: ${event?.target}`);
+      };
+
+      new HaxballRoom(this.db);
+    }
+  }
+}
+
+new IndexedDBInit();
 
 class HaxballRoom {
 
@@ -16,7 +48,10 @@ class HaxballRoom {
   
   private isTrainingMode = false;
 
-  constructor(/*db: IDBDatabase*/) {
+  private db: IDBDatabase;
+
+  constructor(db: IDBDatabase) {
+    this.db = db;
     this.room = HBInit({
       roomName: "Fish 🐠",
       maxPlayers: 16,
@@ -80,6 +115,11 @@ class HaxballRoom {
         ];
         this.room.sendAnnouncement(`⚽ But de ${this.lastBallKicker?.name} ! 📢 ${announcements[Math.floor(Math.random() * announcements.length)]}`, undefined, undefined, "bold", 2);
       }
+      const interactPlayer = interactPlayers.find((p) => p.sessionId === this.lastBallKicker?.id);
+
+      if (interactPlayer) {
+        this.storePlayerStats(interactPlayer, isOwnGoal);
+      }
     }
     this.room.onTeamVictory = (scores) => {
       this.shouldWatchForIdlePlayers = false;
@@ -131,11 +171,44 @@ class HaxballRoom {
         this.changeStadium('sniper');
         return true;
       }
+      if (msg === '!top') {
+        const bite = this.db.transaction(['stats'], 'readonly').objectStore('stats').getAll();
+        bite.onsuccess = () => {
+          console.log(bite.result);
+          const stats = bite.result as IPlayerStats[];
+          const messages: string[] = stats
+            .sort((a, b) => b.nbGoals !== a.nbGoals ? b.nbGoals - a.nbGoals : a.nbOwnGoals - b.nbOwnGoals)
+            .map((playerStats, index) => `${(index < 3 && ['🥇','🥈','🥉'][index]) || '💩'} ${interactPlayers.find((player) => player.id === playerStats.playerId)?.name} - Buts: ${playerStats.nbGoals} / CSC: ${playerStats.nbOwnGoals}`);
+          this.room.sendAnnouncement(messages.join('\n'));
+        };
+      }
 
       return true;
     }
   }
 
+
+  private storePlayerStats(interactPlayer: InteractPlayer, isOwnGoal: boolean) {
+    const objectStore = this.db.transaction(['stats'], 'readwrite').objectStore('stats');
+    const statsRequest = objectStore.get(interactPlayer.id);
+
+    statsRequest.onsuccess = () => {
+      let playerStats = statsRequest.result as IPlayerStats | undefined;
+      if (!playerStats) {
+        playerStats = {
+          playerId: interactPlayer.id,
+          nbGoals: 0,
+          nbOwnGoals: 0,
+        }
+      }
+      if (isOwnGoal) {
+        playerStats.nbOwnGoals += 1;
+      } else {
+        playerStats.nbGoals += 1;
+      }
+      objectStore.put(playerStats, interactPlayer.id);
+    }
+  }
 
 
   private getGreeting(player: InteractPlayer) {
@@ -183,7 +256,6 @@ class HaxballRoom {
   }
 }
 
-new HaxballRoom();
 interface InteractPlayer {
   id: string; // Internal ID
   name: string; // Internal name (deprecated)
@@ -195,6 +267,7 @@ interface InteractPlayer {
 type MapTypes = 'futsal' | 'classic' | 'sniper' | 'training';
 interface ICustomMap { type: MapTypes; players: number; content: string; }
 interface IPlayerActivity { date: Date; }
+interface IPlayerStats { playerId: string, nbGoals: number, nbOwnGoals: number }
 
 const interactPlayers: InteractPlayer[] = [
   {
