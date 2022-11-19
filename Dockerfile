@@ -19,7 +19,7 @@ USER node
 
 WORKDIR /app
 
-COPY --chown=node:node --from=builder /app/build /app/bots
+COPY --chown=node:node --from=builder /app/build/* /app/bots/
 
 ADD config.json /app/
 
