@@ -8,7 +8,6 @@ services:
     network_mode: "host"
     volumes:
       - ./config.json:/app/config.json
-      - ./bots/:/app/bots
       - browser-data:/app/userdatadir
 
 
