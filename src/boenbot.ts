@@ -50,6 +50,8 @@ class HaxballRoom {
 
   private db: IDBDatabase;
 
+  private currentGame?: ICurrentGame;
+
   constructor(db: IDBDatabase) {
     this.db = db;
     this.room = HBInit({
@@ -73,6 +75,7 @@ class HaxballRoom {
       this.lastBallKicker = null;
       this.shouldWatchForIdlePlayers = true;
       this.playerLastActivities.clear();
+      this.currentGame = { scoring: [], startTime: new Date()};
     }
     this.room.onGameStop = (byPlayer) => {
       this.shouldWatchForIdlePlayers = false;
@@ -103,7 +106,6 @@ class HaxballRoom {
     this.room.onTeamGoal = (team) => {
       this.shouldWatchForIdlePlayers = false;
       const isOwnGoal = team !== this.lastBallKicker?.team;
-      const isMatch = this.room.getPlayerList().some((p) => p.team === 1) && this.room.getPlayerList().some((p) => p.team === 2);
 
       if (isOwnGoal) {
         this.room.sendAnnouncement(`⚽🚨 Magnifique CSC, GG ${this.lastBallKicker?.name} !`, undefined, undefined, "bold", 2);
@@ -118,12 +120,21 @@ class HaxballRoom {
       }
       const registeredUser = registeredUsers.find((p) => p.sessionId === this.lastBallKicker?.id);
 
-      if (registeredUser && isMatch) {
-        this.storePlayerStats(registeredUser, isOwnGoal);
+      if (registeredUser) {
+        this.currentGame?.scoring.push({ playerId: registeredUser.id, time: new Date(), ownGoal: isOwnGoal });
       }
     }
     this.room.onTeamVictory = (scores) => {
       this.shouldWatchForIdlePlayers = false;
+      this.currentGame!.endTime = new Date();
+
+      // On est en match uniquement quand 2 équipes contiennent des joueurs inscrits
+      const isMatch = this.room.getPlayerList().some((p) => p.team === 1 && registeredUsers.find((rUser) => rUser.sessionId === p.id)) && this.room.getPlayerList().some((p) => p.team === 2 && registeredUsers.find((rUser) => rUser.sessionId === p.id));
+      if (isMatch) {
+        this.currentGame?.scoring.forEach((scoring) => {
+          this.storePlayerStats(scoring.playerId, scoring.ownGoal);
+        });
+      }
     }
     this.room.onPositionsReset = () => {
       this.shouldWatchForIdlePlayers = true;
@@ -211,15 +222,15 @@ class HaxballRoom {
   }
 
 
-  private storePlayerStats(registeredUser: RegisteredUser, isOwnGoal: boolean) {
+  private storePlayerStats(registeredUserId: string, isOwnGoal: boolean) {
     const objectStore = this.db.transaction(['stats'], 'readwrite').objectStore('stats');
-    const statsRequest = objectStore.get(registeredUser.id);
+    const statsRequest = objectStore.get(registeredUserId);
 
     statsRequest.onsuccess = () => {
       let playerStats = statsRequest.result as IPlayerStats | undefined;
       if (!playerStats) {
         playerStats = {
-          playerId: registeredUser.id,
+          playerId: registeredUserId,
           nbGoals: 0,
           nbOwnGoals: 0,
         }
@@ -229,7 +240,7 @@ class HaxballRoom {
       } else {
         playerStats.nbGoals += 1;
       }
-      objectStore.put(playerStats, registeredUser.id);
+      objectStore.put(playerStats, registeredUserId);
     }
   }
 
@@ -287,6 +298,7 @@ interface RegisteredUser {
   greetings: string[];
 }
 
+interface ICurrentGame { scoring: {playerId: string, time: Date, ownGoal: boolean }[]; startTime: Date, endTime?: Date }
 type MapTypes = 'futsal' | 'classic' | 'sniper' | 'training';
 interface ICustomMap { type: MapTypes; players: number; content: string; }
 interface IPlayerActivity { date: Date; }
