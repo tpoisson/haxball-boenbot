@@ -151,18 +151,31 @@ class HaxballRoom {
       this.playerLastActivities.get(player.id)!.date = new Date();
     }
 
-    this.room.onPlayerJoin = (player) => {
-      // player.auth property is only set in the RoomObject.onPlayerJoin event.
-      const registeredUser = registeredUsers.find((p) => p.publicIds.includes(player.auth)) || registeredUsers.find((p) => p.name === player.name);
-      if (registeredUser) {
-        registeredUser.sessionId = player.id;
+    this.room.onPlayerJoin = (newPlayer) => {
+      const playerList = this.room.getPlayerList();
+      const connectedPublicIds = registeredUsers.filter((rUser) => playerList.find((p) => p.id !== newPlayer.id && p.id === rUser.sessionId)).flatMap((rUser) => rUser.publicIds);
+
+      if (connectedPublicIds.includes(newPlayer.auth)) {
+        this.room.kickPlayer(newPlayer.id, "🍖 Tentative de jambonnage avec une double connexion ?", false);
+        return;
       }
-      const greetingMessage = registeredUser !== undefined ? this.getGreeting(registeredUser) : `Bienvenue ${player.name} !`
+
+      // player.auth property is only set in the RoomObject.onPlayerJoin event.
+      const registeredUser = registeredUsers.find((p) => p.publicIds.includes(newPlayer.auth)) || registeredUsers.find((p) => p.name === newPlayer.name);
+      if (registeredUser) {
+        registeredUser.sessionId = newPlayer.id;
+      }
+
+      const greetingMessage = registeredUser ? `✅ ${this.getGreeting(registeredUser)}` : `Bienvenue ${newPlayer.name} !`
       this.room.sendAnnouncement(greetingMessage, undefined, 0xFF00FF, "bold", 0);
-      this.playerListChanged(player);
+      this.playerListChanged(newPlayer);
     }
 
-    this.room.onPlayerLeave = (player) => {
+    this.room.onPlayerLeave = (leavingPlayer) => {
+      const registeredUser = registeredUsers.find((rUser) => leavingPlayer.id === rUser.sessionId);
+      if (registeredUser) {
+        registeredUser.sessionId = undefined;
+      }
       this.playerListChanged();
     }
 
@@ -308,7 +321,7 @@ const registeredUsers: RegisteredUser[] = [
   {
     id: 'fish',
     name: 'Fish',
-    publicIds: ['OKlLNmjrZvzihrET0nt-y1QIS9T9iK0NsQQAy3Wqe0s', 'DvYez5QUWhoEW5Tn3vUrXthpuZkr5Dz19_1MNbGtETs'],
+    publicIds: ['OKlLNmjrZvzihrET0nt-y1QIS9T9iK0NsQQAy3Wqe0s', 'DvYez5QUWhoEW5Tn3vUrXthpuZkr5Dz19_1MNbGtETs', 'P7uUiHk6cCIKLQ7xx7uTgMQwCxcI_tSnaOOoZeS_TeU'],
     greetings: [
       'Voilà le meilleur joueur 🐠 !',
       'Bonjour Dieu'
@@ -373,7 +386,7 @@ const registeredUsers: RegisteredUser[] = [
     name: 'thompoul',
     publicIds: ['ouwBCSX9sRDL1T6irDgnyLmDfTDV6QQ5f37A_-6S2nM'],
     greetings: [
-      "Bonjour Thomas POGNON ! 💵🤑",
+      "Bonjour Thomas POGNON ! 💵🤑₿",
       "L'autre membre de la Drama Team s'est connecté 🐴 !",
     ]
   }];
