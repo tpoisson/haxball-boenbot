@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+
+  haxball:
+    build:
+      context: .
+    network_mode: "host"
+    volumes:
+      - ./config.json:/app/config.json
+      - ./bots/:/app/bots
+      - browser-data:/app/userdatadir
+
+
+volumes:
+  browser-data:
