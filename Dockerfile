@@ -15,11 +15,9 @@ FROM node:lts-buster
 RUN apt -qq update && apt -qq install --install-recommends chromium -y
 RUN npm install haxball-server -g
 
-USER node
-
 WORKDIR /app
 
-COPY --chown=node:node --from=builder /app/build/* /app/bots/
+COPY --from=builder /app/build/* /app/bots/
 
 ADD config.json /app/
 
