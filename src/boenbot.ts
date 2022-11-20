@@ -361,7 +361,7 @@ class HaxballRoom {
       playerTeam.forEach((p) => this.overrideSetPlayerAvatar(p.id, i % 2 === 0 ? avatar : null));
       i += 1;
     };
-    this.blinkInterval = window.setInterval(blinkFunction, 100);
+    this.blinkInterval = window.setInterval(blinkFunction, 200);
     blinkFunction();
   }
 
