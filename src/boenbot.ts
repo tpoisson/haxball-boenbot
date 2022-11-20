@@ -44,7 +44,7 @@ class HaxballRoom {
 
   private powerShotConfig = {
     enabled: false,
-    timeout: 180, // This means 3 seconds.
+    timeout: 60 * 2, // This means 2 seconds.
     powerCoefficient: 2, //Original ball kick speed would be multiplied by this number when power shot is activated.
   };
 
