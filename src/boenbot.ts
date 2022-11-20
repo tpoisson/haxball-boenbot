@@ -1,4 +1,5 @@
 // https://github.com/haxball/haxball-issues/wiki/Headless-Host
+let room;
 
 class IndexedDBInit {
   private db?: IDBDatabase;
@@ -27,7 +28,7 @@ class IndexedDBInit {
         console.error(`Database error: ${event?.target}`);
       };
 
-      new HaxballRoom(this.db);
+      room = new HaxballRoom(this.db);
     };
   }
 }
@@ -49,6 +50,8 @@ class HaxballRoom {
   private db: IDBDatabase;
 
   private currentGame?: ICurrentGame;
+
+  private blinkInterval?: number;
 
   constructor(db: IDBDatabase) {
     this.db = db;
@@ -75,6 +78,7 @@ class HaxballRoom {
       this.currentGame = { scoring: [], startTime: new Date() };
     };
     this.room.onGameStop = (byPlayer) => {
+      this.clearBlink();
       this.shouldWatchForIdlePlayers = false;
     };
     this.room.onGamePause = (byPlayer) => {
@@ -116,8 +120,11 @@ class HaxballRoom {
         this.currentGame?.scoring.push({ playerId: registeredUser.id, time: new Date(), ownGoal: isOwnGoal });
       }
 
+      const scores = this.room.getScores();
+      const avatar = scores.blue === scores.scoreLimit || scores.red === scores.scoreLimit ? "🏆" : "⚽";
+      this.blinkTeam(team, avatar);
+
       if (this.isMatch()) {
-        const scores = this.room.getScores();
         if ((scores.red === 0 || scores.blue === 0) && (scores.scoreLimit - scores.red === 1 || scores.scoreLimit - scores.blue === 1)) {
           setTimeout(() => {
             this.room.sendAnnouncement(`Y'a des ${scores.blue === 0 ? "bleus" : "rouges"} ?`, undefined, 0xff00ff, "bold", 2);
@@ -140,6 +147,8 @@ class HaxballRoom {
       }
     };
     this.room.onPositionsReset = () => {
+      this.clearBlink();
+      this.room.getPlayerList().forEach((p) => this.overrideSetPlayerAvatar(p.id, null));
       this.shouldWatchForIdlePlayers = true;
       this.playerLastActivities.clear();
     };
@@ -240,6 +249,32 @@ class HaxballRoom {
 
       return true;
     };
+  }
+
+  private clearBlink() {
+    if (this.blinkInterval) {
+      window.clearInterval(this.blinkInterval);
+      this.blinkInterval = undefined;
+    }
+  }
+
+  private blinkTeam(team: 0 | 1 | 2, avatar: string) {
+    let i = 0;
+    this.clearBlink();
+    const playerTeam = this.room.getPlayerList().filter((p) => p.team === team);
+
+    const blinkFunction = () => {
+      playerTeam.forEach((p) => this.overrideSetPlayerAvatar(p.id, i % 2 === 0 ? avatar : null));
+      i += 1;
+    };
+    this.blinkInterval = window.setInterval(blinkFunction, 100);
+    blinkFunction();
+  }
+
+  private overrideSetPlayerAvatar(playerId: number, avatar: string | null) {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore: Unreachable code error
+    this.room.setPlayerAvatar(playerId, avatar);
   }
 
   // On est en match uniquement quand 2 équipes contiennent des joueurs inscrits
