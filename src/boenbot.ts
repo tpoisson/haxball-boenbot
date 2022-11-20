@@ -1,5 +1,6 @@
 // https://github.com/haxball/haxball-issues/wiki/Headless-Host
-let room;
+
+let room; // Make it reachable in the developer console
 
 class IndexedDBInit {
   private db?: IDBDatabase;
@@ -122,11 +123,11 @@ class HaxballRoom {
 
       const scores = this.room.getScores();
       const avatar = scores.blue === scores.scoreLimit || scores.red === scores.scoreLimit ? "🏆" : "⚽";
-      this.blinkTeam(team, avatar);
+      this.blinkTeamAvatar(team, avatar);
 
       if (this.isMatch()) {
         if ((scores.red === 0 || scores.blue === 0) && (scores.scoreLimit - scores.red === 1 || scores.scoreLimit - scores.blue === 1)) {
-          setTimeout(() => {
+          window.setTimeout(() => {
             this.room.sendAnnouncement(`Y'a des ${scores.blue === 0 ? "bleus" : "rouges"} ?`, undefined, 0xff00ff, "bold", 2);
           }, 1000);
         }
@@ -258,7 +259,7 @@ class HaxballRoom {
     }
   }
 
-  private blinkTeam(team: 0 | 1 | 2, avatar: string) {
+  private blinkTeamAvatar(team: 0 | 1 | 2, avatar: string) {
     let i = 0;
     this.clearBlink();
     const playerTeam = this.room.getPlayerList().filter((p) => p.team === team);
