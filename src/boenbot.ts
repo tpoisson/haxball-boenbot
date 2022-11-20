@@ -37,7 +37,16 @@ class IndexedDBInit {
 new IndexedDBInit();
 
 class HaxballRoom {
-  private lastBallKicker: PlayerObject | null = null;
+  private radiusBall = 10; // Classic map puck radius, you can change it with respect to the ball radius of your map.
+  private radiusPlayer = 15; // The original player radius, you can change it with respect to the player radius of your map.
+
+  private triggerDistance = this.radiusBall + this.radiusPlayer + 0.01; //Player ball distance tolerance. You can increase it for less sensitivity.
+
+  private powerShotConfig = {
+    enabled: false,
+    timeout: 180, // This means 3 seconds.
+    powerCoefficient: 2, //Original ball kick speed would be multiplied by this number when power shot is activated.
+  };
 
   private playerLastActivities = new Map<number, IPlayerActivity>();
   private shouldWatchForIdlePlayers = false;
@@ -73,13 +82,14 @@ class HaxballRoom {
 
     // Game Lifecycle
     this.room.onGameStart = (byPlayer) => {
-      this.lastBallKicker = null;
       this.shouldWatchForIdlePlayers = true;
       this.playerLastActivities.clear();
-      this.currentGame = { scoring: [], startTime: new Date() };
+      this.currentGame = { isGameTime: true, timePlayerBallTouch: 0, powerShotActive: false, scoring: [], startTime: new Date() };
     };
     this.room.onGameStop = (byPlayer) => {
       this.clearBlink();
+      this.resetPlayerAvatar();
+      this.currentGame!.isGameTime = false;
       this.shouldWatchForIdlePlayers = false;
     };
     this.room.onGamePause = (byPlayer) => {
@@ -102,24 +112,43 @@ class HaxballRoom {
           }
         }
       }
+
+      if (this.currentGame?.isGameTime && this.room.getScores() && this.room.getPlayerList().some((p) => p.team != 0)) {
+        if (this.currentGame?.playerTouchingBall && this.powerShotConfig.enabled) {
+          this.checkPowerShot();
+        }
+        this.setLastBallToucher();
+      }
     };
 
     // Match LifeCycle
     this.room.onTeamGoal = (team) => {
+      this.currentGame!.isGameTime = false;
       this.shouldWatchForIdlePlayers = false;
-      const isOwnGoal = team !== this.lastBallKicker?.team;
+      const isOwnGoal = team !== this.currentGame?.lastBallToucher?.team;
 
-      if (isOwnGoal) {
-        this.room.sendAnnouncement(`⚽🚨 Magnifique CSC, GG ${this.lastBallKicker?.name} !`, undefined, undefined, "bold", 2);
-      } else {
-        const announcements = ["But chatte ?", "PO PO PO PO ⚽ ⚽ ⚽", "SUUUUUUUUUUUUU 💪🏻", "OOF 🌬️"];
-        this.room.sendAnnouncement(`⚽ But de ${this.lastBallKicker?.name} ! 📢 ${announcements[Math.floor(Math.random() * announcements.length)]}`, undefined, undefined, "bold", 2);
-      }
-      const registeredUser = registeredUsers.find((p) => p.sessionId === this.lastBallKicker?.id);
-
+      const registeredUser = registeredUsers.find((p) => p.sessionId === this.currentGame?.lastBallToucher?.id);
       if (registeredUser) {
-        this.currentGame?.scoring.push({ playerId: registeredUser.id, time: new Date(), ownGoal: isOwnGoal });
+        this.currentGame?.scoring.push({ playerId: registeredUser.id, time: new Date(), ownGoal: isOwnGoal, assist: false });
       }
+
+      const announcements = [];
+      if (isOwnGoal) {
+        announcements.push(`⚽🚨 Magnifique CSC, GG ${this.currentGame?.lastBallToucher?.name} !`);
+      } else {
+        // const announcements = ["But chatte ?", "PO PO PO PO ⚽ ⚽ ⚽", "SUUUUUUUUUUUUU 💪🏻", "OOF 🌬️"];
+        announcements.push(`⚽ But de ${this.currentGame?.lastBallToucher?.name}`);
+      }
+      if (this.currentGame?.lastBallAssist && this.currentGame?.lastBallAssist.id != this.currentGame?.lastBallToucher?.id) {
+        const assistOwnGoal = team !== this.currentGame?.lastBallAssist?.team;
+        announcements.push(`Sur une passe D de ${this.currentGame?.lastBallAssist?.name}`);
+
+        const assistUser = registeredUsers.find((p) => p.sessionId === this.currentGame?.lastBallAssist?.id);
+        if (assistUser) {
+          this.currentGame?.scoring.push({ playerId: assistUser.id, time: new Date(), ownGoal: assistOwnGoal, assist: true });
+        }
+      }
+      this.room.sendAnnouncement(announcements.join(" "), undefined, undefined, "bold", 2);
 
       const scores = this.room.getScores();
       const avatar = scores.blue === scores.scoreLimit || scores.red === scores.scoreLimit ? "🏆" : "⚽";
@@ -135,11 +164,14 @@ class HaxballRoom {
     };
     this.room.onTeamVictory = (scores) => {
       this.shouldWatchForIdlePlayers = false;
+      this.currentGame!.isGameTime = false;
       this.currentGame!.endTime = new Date();
 
       if (this.isMatch()) {
         this.currentGame?.scoring.forEach((scoring) => {
-          this.storePlayerStats(scoring.playerId, scoring.ownGoal);
+          if (!scoring.assist || (scoring.assist && !scoring.ownGoal)) {
+            this.storePlayerStats(scoring.playerId, scoring.ownGoal, scoring.assist);
+          }
         });
         // Si le slip d'une équipe a été arraché
         if (scores.blue === 0 || scores.red === 0) {
@@ -148,8 +180,11 @@ class HaxballRoom {
       }
     };
     this.room.onPositionsReset = () => {
+      this.currentGame!.isGameTime = true;
+      this.currentGame!.lastBallAssist = undefined;
+      this.currentGame!.lastBallToucher = undefined;
       this.clearBlink();
-      this.room.getPlayerList().forEach((p) => this.overrideSetPlayerAvatar(p.id, null));
+      this.resetPlayerAvatar();
       this.shouldWatchForIdlePlayers = true;
       this.playerLastActivities.clear();
     };
@@ -193,10 +228,20 @@ class HaxballRoom {
     };
 
     this.room.onPlayerBallKick = (player) => {
-      this.lastBallKicker = player;
+      if (this.currentGame?.playerTouchingBall?.id === player.id && this.currentGame?.powerShotActive) {
+        this.room.setDiscProperties(0, {
+          xspeed: this.powerShotConfig.powerCoefficient * this.room.getDiscProperties(0).xspeed,
+          yspeed: this.powerShotConfig.powerCoefficient * this.room.getDiscProperties(0).yspeed,
+        });
+        this.currentGame.powerShotActive = false;
+      }
     };
 
     this.room.onPlayerChat = (player, msg) => {
+      if (msg === "!powershot" || msg === "!ps") {
+        this.powerShotConfig.enabled = !this.powerShotConfig.enabled;
+        this.room.sendAnnouncement(`🚀 - ${this.powerShotConfig.enabled ? "Powershot activé ✅" : "Powershot désactivé ❌"} `);
+      }
       if (msg.startsWith("!futsal") && player.admin) {
         this.changeStadium("futsal");
         return true;
@@ -240,9 +285,9 @@ class HaxballRoom {
             .sort((a, b) => (b.nbGoals !== a.nbGoals ? b.nbGoals - a.nbGoals : a.nbOwnGoals - b.nbOwnGoals))
             .map(
               (playerStats, index) =>
-                `${(index < 3 && ["🥇", "🥈", "🥉"][index]) || "💩"} ${registeredUsers.find((player) => player.id === playerStats.playerId)?.name} - Buts: ${playerStats.nbGoals} / CSC: ${
-                  playerStats.nbOwnGoals
-                }`,
+                `${(index < 3 && ["🥇", "🥈", "🥉"][index]) || "💩"} ${registeredUsers.find((player) => player.id === playerStats.playerId)?.name} - Buts: ${playerStats.nbGoals} / Assist : ${
+                  playerStats.nbAssists
+                } / CSC: ${playerStats.nbOwnGoals}`,
             );
           this.room.sendAnnouncement(messages.join("\n"));
         };
@@ -250,6 +295,54 @@ class HaxballRoom {
 
       return true;
     };
+  }
+
+  private resetPlayerAvatar() {
+    this.room.getPlayerList().forEach((p) => this.overrideSetPlayerAvatar(p.id, null));
+  }
+
+  private setLastBallToucher() {
+    const ballPosition = this.room.getBallPosition();
+    const playersTouchingBall = this.room.getPlayerList().filter((player) => player.team !== 0 && this.pointDistance(player.position, ballPosition) < this.triggerDistance);
+
+    if (playersTouchingBall.length === 0) {
+      this.currentGame!.powerShotActive = false;
+      this.currentGame!.playerTouchingBall = undefined;
+    } else if (playersTouchingBall.length === 1) {
+      const player = playersTouchingBall[0];
+      if (this.currentGame?.playerTouchingBall?.id !== player.id) {
+        this.currentGame!.powerShotActive = false;
+        this.currentGame!.playerTouchingBall = player;
+        this.currentGame!.lastBallAssist = this.currentGame?.lastBallToucher;
+        this.currentGame!.lastBallToucher = player;
+      }
+    } else {
+      this.currentGame!.powerShotActive = false;
+      this.currentGame!.playerTouchingBall = undefined;
+    }
+  }
+
+  private pointDistance(p1: { x: number; y: number }, p2: { x: number; y: number }) {
+    const d1 = p1.x - p2.x;
+    const d2 = p1.y - p2.y;
+    return Math.sqrt(d1 * d1 + d2 * d2);
+  }
+
+  private checkPowerShot() {
+    if (this.pointDistance(this.room.getPlayerDiscProperties(this.currentGame!.lastBallToucher!.id), this.room.getDiscProperties(0)) < this.triggerDistance) {
+      this.currentGame!.timePlayerBallTouch += 1;
+
+      if (this.currentGame!.timePlayerBallTouch === this.powerShotConfig.timeout) {
+        this.room.sendAnnouncement(`${this.currentGame?.playerTouchingBall?.name} peut envoyer une grosse boulette 🚀⚽ !`, undefined, 0x00ff00, "italic", 2); //Power shot is activated when the player touches to the ball for 3 seconds long.
+      }
+      if (this.currentGame!.timePlayerBallTouch >= this.powerShotConfig.timeout) {
+        this.currentGame!.powerShotActive = true;
+      }
+    } else {
+      if (this.currentGame!.timePlayerBallTouch != 0) {
+        this.currentGame!.timePlayerBallTouch = 0;
+      }
+    }
   }
 
   private clearBlink() {
@@ -286,7 +379,7 @@ class HaxballRoom {
     );
   }
 
-  private storePlayerStats(registeredUserId: string, isOwnGoal: boolean) {
+  private storePlayerStats(registeredUserId: string, isOwnGoal: boolean, isAssist: boolean) {
     const objectStore = this.db.transaction(["stats"], "readwrite").objectStore("stats");
     const statsRequest = objectStore.get(registeredUserId);
 
@@ -297,12 +390,17 @@ class HaxballRoom {
           playerId: registeredUserId,
           nbGoals: 0,
           nbOwnGoals: 0,
+          nbAssists: 0,
         };
       }
-      if (isOwnGoal) {
-        playerStats.nbOwnGoals += 1;
+      if (isAssist) {
+        playerStats.nbAssists += 1;
       } else {
-        playerStats.nbGoals += 1;
+        if (isOwnGoal) {
+          playerStats.nbOwnGoals += 1;
+        } else {
+          playerStats.nbGoals += 1;
+        }
       }
       objectStore.put(playerStats, registeredUserId);
     };
@@ -360,7 +458,13 @@ interface RegisteredUser {
 }
 
 interface ICurrentGame {
-  scoring: { playerId: string; time: Date; ownGoal: boolean }[];
+  playerTouchingBall?: PlayerObject;
+  lastBallToucher?: PlayerObject;
+  lastBallAssist?: PlayerObject;
+  isGameTime: boolean;
+  powerShotActive: boolean;
+  timePlayerBallTouch: number; //The time indicator that increases as player touched to the ball
+  scoring: { playerId: string; time: Date; ownGoal: boolean; assist: boolean }[];
   startTime: Date;
   endTime?: Date;
 }
@@ -377,6 +481,7 @@ interface IPlayerStats {
   playerId: string;
   nbGoals: number;
   nbOwnGoals: number;
+  nbAssists: number;
 }
 
 const registeredUsers: RegisteredUser[] = [
