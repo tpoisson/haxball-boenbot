@@ -115,22 +115,27 @@ class HaxballRoom {
       if (registeredUser) {
         this.currentGame?.scoring.push({ playerId: registeredUser.id, time: new Date(), ownGoal: isOwnGoal });
       }
+
+      if (this.isMatch()) {
+        const scores = this.room.getScores();
+        if ((scores.red === 0 || scores.blue === 0) && (scores.scoreLimit - scores.red === 1 || scores.scoreLimit - scores.blue === 1)) {
+          setTimeout(() => {
+            this.room.sendAnnouncement(`Y'a des ${scores.blue === 0 ? "bleus" : "rouges"} ?`, undefined, 0xff00ff, "bold", 2);
+          }, 1000);
+        }
+      }
     };
     this.room.onTeamVictory = (scores) => {
       this.shouldWatchForIdlePlayers = false;
       this.currentGame!.endTime = new Date();
 
-      // On est en match uniquement quand 2 équipes contiennent des joueurs inscrits
-      const isMatch =
-        this.room.getPlayerList().some((p) => p.team === 1 && registeredUsers.find((rUser) => rUser.sessionId === p.id)) &&
-        this.room.getPlayerList().some((p) => p.team === 2 && registeredUsers.find((rUser) => rUser.sessionId === p.id));
-      if (isMatch) {
+      if (this.isMatch()) {
         this.currentGame?.scoring.forEach((scoring) => {
           this.storePlayerStats(scoring.playerId, scoring.ownGoal);
         });
         // Si le slip d'une équipe a été arraché
         if (scores.blue === 0 || scores.red === 0) {
-          this.room.sendAnnouncement("🍆 Mais c'est une pétée ?");
+          this.room.sendAnnouncement("🍆 Mais c'est une pétée ?", undefined, 0xff00ff, "bold", 2);
         }
       }
     };
@@ -235,6 +240,14 @@ class HaxballRoom {
 
       return true;
     };
+  }
+
+  // On est en match uniquement quand 2 équipes contiennent des joueurs inscrits
+  private isMatch() {
+    return (
+      this.room.getPlayerList().some((p) => p.team === 1 && registeredUsers.find((rUser) => rUser.sessionId === p.id)) &&
+      this.room.getPlayerList().some((p) => p.team === 2 && registeredUsers.find((rUser) => rUser.sessionId === p.id))
+    );
   }
 
   private storePlayerStats(registeredUserId: string, isOwnGoal: boolean) {
