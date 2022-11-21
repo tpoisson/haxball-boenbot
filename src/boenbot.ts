@@ -84,7 +84,7 @@ class HaxballRoom {
     this.room.onGameStart = (byPlayer) => {
       this.shouldWatchForIdlePlayers = true;
       this.playerLastActivities.clear();
-      this.currentGame = { isGameTime: true, timePlayerBallTouch: 0, powerShotActive: false, scoring: [], startTime: new Date() };
+      this.currentGame = { ballColor: this.room.getDiscProperties(0).color, isGameTime: true, timePlayerBallTouch: 0, powerShotActive: false, scoring: [], startTime: new Date() };
     };
     this.room.onGameStop = (byPlayer) => {
       this.clearBlink();
@@ -307,7 +307,10 @@ class HaxballRoom {
 
     if (playersTouchingBall.length === 0) {
       this.currentGame!.powerShotActive = false;
-      this.currentGame!.playerTouchingBall = undefined;
+      if (this.currentGame!.playerTouchingBall) {
+        this.room.setDiscProperties(0, { color: this.currentGame!.ballColor });
+        this.currentGame!.playerTouchingBall = undefined;
+      }
     } else if (playersTouchingBall.length === 1) {
       const player = playersTouchingBall[0];
       if (this.currentGame?.playerTouchingBall?.id !== player.id) {
@@ -318,7 +321,10 @@ class HaxballRoom {
       }
     } else {
       this.currentGame!.powerShotActive = false;
-      this.currentGame!.playerTouchingBall = undefined;
+      if (this.currentGame!.playerTouchingBall) {
+        this.room.setDiscProperties(0, { color: this.currentGame!.ballColor });
+        this.currentGame!.playerTouchingBall = undefined;
+      }
     }
   }
 
@@ -333,6 +339,7 @@ class HaxballRoom {
       this.currentGame!.timePlayerBallTouch += 1;
 
       if (this.currentGame!.timePlayerBallTouch === this.powerShotConfig.timeout) {
+        this.room.setDiscProperties(0, { color: 0xff00ff });
         this.room.sendAnnouncement(`${this.currentGame?.playerTouchingBall?.name} peut envoyer une grosse boulette 🚀⚽ !`, undefined, 0x00ff00, "italic", 2); //Power shot is activated when the player touches to the ball for 3 seconds long.
       }
       if (this.currentGame!.timePlayerBallTouch >= this.powerShotConfig.timeout) {
@@ -463,6 +470,7 @@ interface ICurrentGame {
   lastBallAssist?: PlayerObject;
   isGameTime: boolean;
   powerShotActive: boolean;
+  ballColor: number;
   timePlayerBallTouch: number; //The time indicator that increases as player touched to the ball
   scoring: { playerId: string; time: Date; ownGoal: boolean; assist: boolean }[];
   startTime: Date;
