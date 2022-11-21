@@ -106,8 +106,8 @@ class HaxballRoom {
             const player = this.room.getPlayer(playerId);
             if (player && player.team !== 0) {
               this.playerLastActivities.delete(playerId);
-              this.room.setPlayerTeam(playerId, 0);
-              this.room.sendAnnouncement(`😴 ${player.name} s'est assoupi, transfert en spectateur`);
+              // this.room.setPlayerTeam(playerId, 0);
+              this.room.sendAnnouncement(`😴 ${player.name} s'est assoupi`);
             }
           }
         }
