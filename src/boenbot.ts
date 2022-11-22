@@ -78,10 +78,20 @@ class HaxballRoom {
 
     // Game Lifecycle
     this.room.onGameStart = (byPlayer) => {
-      this.roomConfig = { ballRadius: this.room.getDiscProperties(0).radius, playerRadius: this.room.getPlayerDiscProperties(this.room.getPlayerList()[0].id).radius };
+      this.roomConfig = {
+        ballRadius: this.room.getDiscProperties(0).radius,
+        playerRadius: this.room.getPlayerDiscProperties(this.room.getPlayerList()[0].id).radius,
+      };
 
       this.playerLastActivities.clear();
-      this.currentGame = { ballColor: this.room.getDiscProperties(0).color, isGameTime: true, timePlayerBallTouch: 0, powerShotActive: false, scoring: [], startTime: new Date() };
+      this.currentGame = {
+        ballColor: this.room.getDiscProperties(0).color,
+        isGameTime: true,
+        timePlayerBallTouch: 0,
+        powerShotActive: false,
+        scoring: [],
+        startTime: new Date(),
+      };
     };
     this.room.onGameStop = (byPlayer) => {
       this.clearBlink();
@@ -194,7 +204,9 @@ class HaxballRoom {
 
     this.room.onPlayerJoin = (newPlayer) => {
       const playerList = this.room.getPlayerList();
-      const connectedPublicIds = registeredUsers.filter((rUser) => playerList.find((p) => p.id !== newPlayer.id && p.id === rUser.sessionId)).flatMap((rUser) => rUser.publicIds);
+      const connectedPublicIds = registeredUsers
+        .filter((rUser) => playerList.find((p) => p.id !== newPlayer.id && p.id === rUser.sessionId))
+        .flatMap((rUser) => rUser.publicIds);
 
       if (connectedPublicIds.includes(newPlayer.auth)) {
         this.room.kickPlayer(newPlayer.id, "🍖 Tentative de jambonnage avec une double connexion ?", false);
@@ -202,7 +214,8 @@ class HaxballRoom {
       }
 
       // player.auth property is only set in the RoomObject.onPlayerJoin event.
-      const registeredUser = registeredUsers.find((p) => p.publicIds.includes(newPlayer.auth)) || registeredUsers.find((p) => p.name === newPlayer.name);
+      const registeredUser =
+        registeredUsers.find((p) => p.publicIds.includes(newPlayer.auth)) || registeredUsers.find((p) => p.name === newPlayer.name);
       if (registeredUser) {
         registeredUser.sessionId = newPlayer.id;
       }
@@ -278,9 +291,9 @@ class HaxballRoom {
             .sort((a, b) => (b.nbGoals !== a.nbGoals ? b.nbGoals - a.nbGoals : a.nbOwnGoals - b.nbOwnGoals))
             .map(
               (playerStats, index) =>
-                `${(index < 3 && ["🥇", "🥈", "🥉"][index]) || "💩"} ${registeredUsers.find((player) => player.id === playerStats.playerId)?.name} - Buts: ${playerStats.nbGoals} / Assist : ${
-                  playerStats.nbAssists
-                } / CSC: ${playerStats.nbOwnGoals}`,
+                `${(index < 3 && ["🥇", "🥈", "🥉"][index]) || "💩"} ${
+                  registeredUsers.find((player) => player.id === playerStats.playerId)?.name
+                } - Buts: ${playerStats.nbGoals} / Assist : ${playerStats.nbAssists} / CSC: ${playerStats.nbOwnGoals}`,
             );
           this.room.sendAnnouncement(messages.join("\n"));
         };
@@ -300,7 +313,9 @@ class HaxballRoom {
 
   private setLastBallToucher() {
     const ballPosition = this.room.getBallPosition();
-    const playersTouchingBall = this.room.getPlayerList().filter((player) => player.team !== 0 && this.pointDistance(player.position, ballPosition) < this.getTriggerDistance());
+    const playersTouchingBall = this.room
+      .getPlayerList()
+      .filter((player) => player.team !== 0 && this.pointDistance(player.position, ballPosition) < this.getTriggerDistance());
 
     if (playersTouchingBall.length === 0) {
       this.currentGame!.powerShotActive = false;
@@ -334,12 +349,21 @@ class HaxballRoom {
   private checkPowerShot() {
     const playerTouchingBallId = this.currentGame?.playerTouchingBall?.id;
 
-    if (playerTouchingBallId && this.pointDistance(this.room.getPlayerDiscProperties(playerTouchingBallId), this.room.getDiscProperties(0)) < this.getTriggerDistance()) {
+    if (
+      playerTouchingBallId &&
+      this.pointDistance(this.room.getPlayerDiscProperties(playerTouchingBallId), this.room.getDiscProperties(0)) < this.getTriggerDistance()
+    ) {
       this.currentGame!.timePlayerBallTouch += 1;
 
       if (this.currentGame!.timePlayerBallTouch === this.powerShotConfig.timeout) {
         this.room.setDiscProperties(0, { color: 0xff00ff });
-        this.room.sendAnnouncement(`${this.currentGame?.playerTouchingBall?.name} peut envoyer une grosse boulette 🚀⚽ !`, undefined, 0x00ff00, "italic", 2); //Power shot is activated when the player touches to the ball for 3 seconds long.
+        this.room.sendAnnouncement(
+          `${this.currentGame?.playerTouchingBall?.name} peut envoyer une grosse boulette 🚀⚽ !`,
+          undefined,
+          0x00ff00,
+          "italic",
+          2,
+        ); //Power shot is activated when the player touches to the ball for 3 seconds long.
       }
       if (this.currentGame!.timePlayerBallTouch >= this.powerShotConfig.timeout) {
         this.currentGame!.powerShotActive = true;
@@ -495,7 +519,11 @@ const registeredUsers: RegisteredUser[] = [
   {
     id: "fish",
     name: "Fish",
-    publicIds: ["OKlLNmjrZvzihrET0nt-y1QIS9T9iK0NsQQAy3Wqe0s", "DvYez5QUWhoEW5Tn3vUrXthpuZkr5Dz19_1MNbGtETs", "P7uUiHk6cCIKLQ7xx7uTgMQwCxcI_tSnaOOoZeS_TeU"],
+    publicIds: [
+      "OKlLNmjrZvzihrET0nt-y1QIS9T9iK0NsQQAy3Wqe0s",
+      "DvYez5QUWhoEW5Tn3vUrXthpuZkr5Dz19_1MNbGtETs",
+      "P7uUiHk6cCIKLQ7xx7uTgMQwCxcI_tSnaOOoZeS_TeU",
+    ],
     greetings: ["Voilà le meilleur joueur 🐠 !", "Bonjour Dieu"],
   },
   {
