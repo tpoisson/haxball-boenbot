@@ -335,7 +335,9 @@ class HaxballRoom {
   }
 
   private checkPowerShot() {
-    if (this.pointDistance(this.room.getPlayerDiscProperties(this.currentGame!.lastBallToucher!.id), this.room.getDiscProperties(0)) < this.triggerDistance) {
+    const playerTouchingBallId = this.currentGame?.playerTouchingBall?.id;
+
+    if (playerTouchingBallId && this.pointDistance(this.room.getPlayerDiscProperties(playerTouchingBallId), this.room.getDiscProperties(0)) < this.triggerDistance) {
       this.currentGame!.timePlayerBallTouch += 1;
 
       if (this.currentGame!.timePlayerBallTouch === this.powerShotConfig.timeout) {
