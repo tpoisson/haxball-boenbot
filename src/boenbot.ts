@@ -37,11 +37,6 @@ class IndexedDBInit {
 new IndexedDBInit();
 
 class HaxballRoom {
-  private radiusBall = 10; // Classic map puck radius, you can change it with respect to the ball radius of your map.
-  private radiusPlayer = 15; // The original player radius, you can change it with respect to the player radius of your map.
-
-  private triggerDistance = this.radiusBall + this.radiusPlayer + 0.01; //Player ball distance tolerance. You can increase it for less sensitivity.
-
   private powerShotConfig = {
     enabled: false,
     timeout: 60 * 2, // This means 2 seconds.
@@ -49,7 +44,6 @@ class HaxballRoom {
   };
 
   private playerLastActivities = new Map<number, IPlayerActivity>();
-  private shouldWatchForIdlePlayers = false;
   private idleTimeout = 7 * 1000;
 
   private room: RoomObject;
@@ -60,6 +54,8 @@ class HaxballRoom {
   private db: IDBDatabase;
 
   private currentGame?: ICurrentGame;
+
+  private roomConfig: { ballRadius?: number; playerRadius?: number } = {};
 
   private blinkInterval?: number;
 
@@ -82,7 +78,8 @@ class HaxballRoom {
 
     // Game Lifecycle
     this.room.onGameStart = (byPlayer) => {
-      this.shouldWatchForIdlePlayers = true;
+      this.roomConfig = { ballRadius: this.room.getDiscProperties(0).radius, playerRadius: this.room.getPlayerDiscProperties(this.room.getPlayerList()[0].id).radius };
+
       this.playerLastActivities.clear();
       this.currentGame = { ballColor: this.room.getDiscProperties(0).color, isGameTime: true, timePlayerBallTouch: 0, powerShotActive: false, scoring: [], startTime: new Date() };
     };
@@ -90,17 +87,16 @@ class HaxballRoom {
       this.clearBlink();
       this.resetPlayerAvatar();
       this.currentGame!.isGameTime = false;
-      this.shouldWatchForIdlePlayers = false;
     };
     this.room.onGamePause = (byPlayer) => {
-      this.shouldWatchForIdlePlayers = false;
+      this.currentGame!.isGameTime = false;
     };
     this.room.onGameUnpause = (byPlayer) => {
-      this.shouldWatchForIdlePlayers = true;
+      this.currentGame!.isGameTime = true;
       this.playerLastActivities.clear();
     };
     this.room.onGameTick = () => {
-      if (this.shouldWatchForIdlePlayers && !this.isTrainingMode) {
+      if (this.currentGame?.isGameTime && !this.isTrainingMode) {
         for (const [playerId, playerData] of this.playerLastActivities) {
           if (new Date().getTime() - playerData.date.getTime() > this.idleTimeout) {
             const player = this.room.getPlayer(playerId);
@@ -124,7 +120,6 @@ class HaxballRoom {
     // Match LifeCycle
     this.room.onTeamGoal = (team) => {
       this.currentGame!.isGameTime = false;
-      this.shouldWatchForIdlePlayers = false;
       const isOwnGoal = team !== this.currentGame?.lastBallToucher?.team;
 
       const registeredUser = registeredUsers.find((p) => p.sessionId === this.currentGame?.lastBallToucher?.id);
@@ -163,7 +158,6 @@ class HaxballRoom {
       }
     };
     this.room.onTeamVictory = (scores) => {
-      this.shouldWatchForIdlePlayers = false;
       this.currentGame!.isGameTime = false;
       this.currentGame!.endTime = new Date();
 
@@ -185,7 +179,6 @@ class HaxballRoom {
       this.currentGame!.lastBallToucher = undefined;
       this.clearBlink();
       this.resetPlayerAvatar();
-      this.shouldWatchForIdlePlayers = true;
       this.playerLastActivities.clear();
     };
 
@@ -301,9 +294,13 @@ class HaxballRoom {
     this.room.getPlayerList().forEach((p) => this.overrideSetPlayerAvatar(p.id, null));
   }
 
+  private getTriggerDistance() {
+    return this.roomConfig.ballRadius! + this.roomConfig.playerRadius! + 0.01;
+  }
+
   private setLastBallToucher() {
     const ballPosition = this.room.getBallPosition();
-    const playersTouchingBall = this.room.getPlayerList().filter((player) => player.team !== 0 && this.pointDistance(player.position, ballPosition) < this.triggerDistance);
+    const playersTouchingBall = this.room.getPlayerList().filter((player) => player.team !== 0 && this.pointDistance(player.position, ballPosition) < this.getTriggerDistance());
 
     if (playersTouchingBall.length === 0) {
       this.currentGame!.powerShotActive = false;
@@ -337,7 +334,7 @@ class HaxballRoom {
   private checkPowerShot() {
     const playerTouchingBallId = this.currentGame?.playerTouchingBall?.id;
 
-    if (playerTouchingBallId && this.pointDistance(this.room.getPlayerDiscProperties(playerTouchingBallId), this.room.getDiscProperties(0)) < this.triggerDistance) {
+    if (playerTouchingBallId && this.pointDistance(this.room.getPlayerDiscProperties(playerTouchingBallId), this.room.getDiscProperties(0)) < this.getTriggerDistance()) {
       this.currentGame!.timePlayerBallTouch += 1;
 
       if (this.currentGame!.timePlayerBallTouch === this.powerShotConfig.timeout) {
@@ -528,7 +525,7 @@ const registeredUsers: RegisteredUser[] = [
   {
     id: "laura",
     name: "Laura",
-    publicIds: [],
+    publicIds: ["wWh2uo9A8zskwre1AY1oi1BRKmfTX8NowyN8vQcPjNA"],
     greetings: ["🥦🥦🥦🥦🥦🥦🥦🥦🥦🥦🥦🥦🥦🥦🥦🥦🥦🥦🥦🥦🥦🥦"],
   },
   {
