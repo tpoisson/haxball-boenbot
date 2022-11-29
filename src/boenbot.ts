@@ -91,6 +91,7 @@ class HaxballRoom {
         powerShotActive: false,
         scoring: [],
         startTime: new Date(),
+        hasKickedOff: false,
       };
     };
     this.room.onGameStop = (byPlayer) => {
@@ -120,7 +121,7 @@ class HaxballRoom {
       }
 
       if (this.currentGame?.isGameTime && this.room.getScores() && this.room.getPlayerList().some((p) => p.team != 0)) {
-        if (this.currentGame?.playerTouchingBall && this.powerShotConfig.enabled) {
+        if (this.currentGame?.playerTouchingBall && this.powerShotConfig.enabled && this.currentGame?.hasKickedOff === true) {
           this.checkPowerShot();
         }
         this.setLastBallToucher();
@@ -187,6 +188,7 @@ class HaxballRoom {
       this.currentGame!.isGameTime = true;
       this.currentGame!.lastBallAssist = undefined;
       this.currentGame!.lastBallToucher = undefined;
+      this.currentGame!.hasKickedOff = false;
       this.clearBlink();
       this.resetPlayerAvatar();
       this.playerLastActivities.clear();
@@ -234,6 +236,9 @@ class HaxballRoom {
     };
 
     this.room.onPlayerBallKick = (player) => {
+      if (this.currentGame?.hasKickedOff === false) {
+        this.currentGame.hasKickedOff = true;
+      }
       if (this.currentGame?.playerTouchingBall?.id === player.id && this.currentGame?.powerShotActive) {
         this.room.setDiscProperties(0, {
           xspeed: this.powerShotConfig.powerCoefficient * this.room.getDiscProperties(0).xspeed,
@@ -491,6 +496,7 @@ interface ICurrentGame {
   playerTouchingBall?: PlayerObject;
   lastBallToucher?: PlayerObject;
   lastBallAssist?: PlayerObject;
+  hasKickedOff: boolean;
   isGameTime: boolean;
   powerShotActive: boolean;
   ballColor: number;
