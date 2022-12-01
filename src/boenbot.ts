@@ -169,8 +169,10 @@ class HaxballRoom {
       }
     };
     this.room.onTeamVictory = (scores) => {
-      this.currentGame!.isGameTime = false;
-      this.currentGame!.endTime = new Date();
+      if (this.currentGame) {
+        this.currentGame.isGameTime = false;
+        this.currentGame.endTime = new Date();
+      }
 
       if (this.isMatch()) {
         this.currentGame?.scoring.forEach((scoring) => {
@@ -185,10 +187,12 @@ class HaxballRoom {
       }
     };
     this.room.onPositionsReset = () => {
-      this.currentGame!.isGameTime = true;
-      this.currentGame!.lastBallAssist = undefined;
-      this.currentGame!.lastBallToucher = undefined;
-      this.currentGame!.hasKickedOff = false;
+      if (this.currentGame) {
+        this.currentGame.isGameTime = true;
+        this.currentGame.lastBallAssist = undefined;
+        this.currentGame.lastBallToucher = undefined;
+        this.currentGame.hasKickedOff = false;
+      }
       this.clearBlink();
       this.resetPlayerAvatar();
       this.playerLastActivities.clear();
@@ -249,7 +253,7 @@ class HaxballRoom {
     };
 
     this.room.onPlayerChat = (player, msg) => {
-      if (msg === "!powershot" || msg === "!ps") {
+      if (["!powershot", "!ps"].includes(msg) && player.admin) {
         this.powerShotConfig.enabled = !this.powerShotConfig.enabled;
         this.room.sendAnnouncement(`🚀 - ${this.powerShotConfig.enabled ? "Powershot activé ✅" : "Powershot désactivé ❌"} `);
       }
@@ -323,24 +327,28 @@ class HaxballRoom {
       .filter((player) => player.team !== 0 && this.pointDistance(player.position, ballPosition) < this.getTriggerDistance());
 
     if (playersTouchingBall.length === 0) {
-      this.currentGame!.powerShotActive = false;
-      if (this.currentGame!.playerTouchingBall) {
-        this.room.setDiscProperties(0, { color: this.currentGame!.ballColor });
-        this.currentGame!.playerTouchingBall = undefined;
+      if (this.currentGame) {
+        this.currentGame.powerShotActive = false;
+        if (this.currentGame.playerTouchingBall) {
+          this.room.setDiscProperties(0, { color: this.currentGame.ballColor });
+          this.currentGame.playerTouchingBall = undefined;
+        }
       }
     } else if (playersTouchingBall.length === 1) {
       const player = playersTouchingBall[0];
-      if (this.currentGame?.playerTouchingBall?.id !== player.id) {
-        this.currentGame!.powerShotActive = false;
-        this.currentGame!.playerTouchingBall = player;
-        this.currentGame!.lastBallAssist = this.currentGame?.lastBallToucher;
-        this.currentGame!.lastBallToucher = player;
+      if (this.currentGame && this.currentGame.playerTouchingBall?.id !== player.id) {
+        this.currentGame.powerShotActive = false;
+        this.currentGame.playerTouchingBall = player;
+        this.currentGame.lastBallAssist = this.currentGame?.lastBallToucher;
+        this.currentGame.lastBallToucher = player;
       }
     } else {
-      this.currentGame!.powerShotActive = false;
-      if (this.currentGame!.playerTouchingBall) {
-        this.room.setDiscProperties(0, { color: this.currentGame!.ballColor });
-        this.currentGame!.playerTouchingBall = undefined;
+      if (this.currentGame) {
+        this.currentGame.powerShotActive = false;
+        if (this.currentGame.playerTouchingBall) {
+          this.room.setDiscProperties(0, { color: this.currentGame.ballColor });
+          this.currentGame.playerTouchingBall = undefined;
+        }
       }
     }
   }
@@ -353,14 +361,16 @@ class HaxballRoom {
 
   private checkPowerShot() {
     const playerTouchingBallId = this.currentGame?.playerTouchingBall?.id;
+    const getPlayerDiscProperties = playerTouchingBallId && this.room.getPlayerDiscProperties(playerTouchingBallId);
 
     if (
       playerTouchingBallId &&
-      this.pointDistance(this.room.getPlayerDiscProperties(playerTouchingBallId), this.room.getDiscProperties(0)) < this.getTriggerDistance()
+      getPlayerDiscProperties &&
+      this.pointDistance(getPlayerDiscProperties, this.room.getDiscProperties(0)) < this.getTriggerDistance()
     ) {
-      this.currentGame!.timePlayerBallTouch += 1;
+      this.currentGame && (this.currentGame.timePlayerBallTouch += 1);
 
-      if (this.currentGame!.timePlayerBallTouch === this.powerShotConfig.timeout) {
+      if (this.currentGame && this.currentGame.timePlayerBallTouch === this.powerShotConfig.timeout) {
         this.room.setDiscProperties(0, { color: 0xff00ff });
         this.room.sendAnnouncement(
           `${this.currentGame?.playerTouchingBall?.name} peut envoyer une grosse boulette 🚀⚽ !`,
@@ -370,12 +380,12 @@ class HaxballRoom {
           2,
         ); //Power shot is activated when the player touches to the ball for 3 seconds long.
       }
-      if (this.currentGame!.timePlayerBallTouch >= this.powerShotConfig.timeout) {
-        this.currentGame!.powerShotActive = true;
+      if (this.currentGame && this.currentGame.timePlayerBallTouch >= this.powerShotConfig.timeout) {
+        this.currentGame.powerShotActive = true;
       }
     } else {
-      if (this.currentGame!.timePlayerBallTouch != 0) {
-        this.currentGame!.timePlayerBallTouch = 0;
+      if (this.currentGame && this.currentGame.timePlayerBallTouch != 0) {
+        this.currentGame.timePlayerBallTouch = 0;
       }
     }
   }
