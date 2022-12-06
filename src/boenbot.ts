@@ -156,8 +156,14 @@ class HaxballRoom {
           if (isOwnGoal) {
             announcements.push(`⚽🚨 Magnifique CSC, GG ${scorer.name} !`);
           } else {
-            // const announcements = ["But chatte ?", "PO PO PO PO ⚽ ⚽ ⚽", "SUUUUUUUUUUUUU 💪🏻", "OOF 🌬️"];
-            announcements.push(`⚽ But de ${scorer.name} !`);
+            const allScorerGoals = this.currentGame.scoring.filter((scoring) => scoring.scorer.id === scorer.id);
+            if (allScorerGoals.length === 2) {
+              announcements.push(`⚽ Doublé de ${scorer.name} !`);
+            } else if (allScorerGoals.length === 3) {
+              announcements.push(`⚽ Triplé de ${scorer.name} !`);
+            } else {
+              announcements.push(`⚽ But de ${scorer.name} !`);
+            }
           }
           if (assist) {
             announcements.push(`🏃🏻 Sur une passe décisive de ${assist.name} !`);
@@ -197,10 +203,32 @@ class HaxballRoom {
             this.storePlayerStats(assistIsRegistered.id, false, true);
           }
         });
+        // Homme du match
+        const playerMatchData = new Map<number, { points: number; name: string }>();
+        this.currentGame?.scoring.forEach((scoring) => {
+          if (!playerMatchData.has(scoring.scorer.id)) {
+            playerMatchData.set(scoring.scorer.id, { points: 0, name: scoring.scorer.name });
+          }
+          playerMatchData.get(scoring.scorer.id)!.points += 10 * (scoring.ownGoal ? -0.5 : 1);
+          if (scoring.assist) {
+            if (!playerMatchData.has(scoring.assist.id)) {
+              playerMatchData.set(scoring.assist.id, { points: 0, name: scoring.assist.name });
+            }
+            playerMatchData.get(scoring.assist.id)!.points += 4;
+          }
+        });
+
+        const announcements = [];
+        if (playerMatchData.size > 0) {
+          const manOfTheMatch = Array.from(playerMatchData.values()).sort((a, b) => a.points - b.points)[0];
+          announcements.push(`🎖️ Homme du match : ${manOfTheMatch.name}`);
+        }
+
         // Si le slip d'une équipe a été arraché
         if (scores.blue === 0 || scores.red === 0) {
-          this.room.sendAnnouncement("🍆 Mais c'est une pétée ?", undefined, 0xff00ff, "bold", 2);
+          announcements.push("🍆 Mais c'est une pétée ?");
         }
+        this.room.sendAnnouncement(announcements.join("\n"), undefined, 0xff00ff, "bold", 2);
       }
     };
     this.room.onPositionsReset = () => {
