@@ -163,7 +163,7 @@ class HaxballRoom {
       if (this.isMatch()) {
         if ((scores.red === 0 || scores.blue === 0) && (scores.scoreLimit - scores.red === 1 || scores.scoreLimit - scores.blue === 1)) {
           window.setTimeout(() => {
-            this.room.sendAnnouncement(`Y'a des ${scores.blue === 0 ? "bleus" : "rouges"} ?`, undefined, 0xff00ff, "bold", 2);
+            this.room.sendAnnouncement(`📢 Y'a des ${scores.blue === 0 ? "bleus" : "rouges"} ?`, undefined, 0xff00ff, "bold", 2);
           }, 1000);
         }
       }
@@ -269,15 +269,21 @@ class HaxballRoom {
         this.changeStadium("sniper");
         return true;
       }
-      if (msg === "!rematch" && player.admin) {
+      if (["!rematch", "!rm"].includes(msg) && player.admin) {
         this.room.stopGame();
         const players = this.room.getPlayerList();
         players.forEach((p) => {
           this.room.setPlayerTeam(p.id, p.team === 1 ? 2 : 1);
         });
         this.room.startGame();
+        this.room.sendAnnouncement("📢 Rematch game !", undefined, 0xff00ff, "bold", 2);
       }
-      if (msg === "!shuffle" && player.admin) {
+      if (["!reset", "!rs"].includes(msg) && player.admin) {
+        this.room.stopGame();
+        this.room.startGame();
+        this.room.sendAnnouncement("📢 Game reset !", undefined, 0xff00ff, "bold", 2);
+      }
+      if (["!shuffle", "!sf"].includes(msg) && player.admin) {
         this.room.stopGame();
         const playerIdList = this.room.getPlayerList().map((p) => p.id);
         let currentIndex = playerIdList.length,
@@ -290,6 +296,7 @@ class HaxballRoom {
 
         playerIdList.forEach((playerId, index) => this.room.setPlayerTeam(playerId, index % 2 == 0 ? 1 : 2));
         this.room.startGame();
+        this.room.sendAnnouncement("📢 Teams shuffled !", undefined, 0xff00ff, "bold", 2);
       }
       if (msg === "!top") {
         const bite = this.db.transaction(["stats"], "readonly").objectStore("stats").getAll();
@@ -300,8 +307,7 @@ class HaxballRoom {
             .sort((a, b) => (b.nbGoals !== a.nbGoals ? b.nbGoals - a.nbGoals : a.nbOwnGoals - b.nbOwnGoals))
             .map(
               (playerStats, index) =>
-                `${(index < 3 && ["🥇", "🥈", "🥉"][index]) || "💩"} ${
-                  registeredUsers.find((player) => player.id === playerStats.playerId)?.name
+                `${(index < 3 && ["🥇", "🥈", "🥉"][index]) || "💩"} ${registeredUsers.find((player) => player.id === playerStats.playerId)?.name
                 } - Buts: ${playerStats.nbGoals} / Assist : ${playerStats.nbAssists} / CSC: ${playerStats.nbOwnGoals}`,
             );
           this.room.sendAnnouncement(messages.join("\n"));
