@@ -10,7 +10,7 @@ RUN npm ci
 
 RUN npm run build
 
-FROM node:lts-buster
+FROM node:lts-bullseye
 
 RUN apt -qq update && apt -qq install --install-recommends chromium -y
 RUN npm install haxball-server -g
