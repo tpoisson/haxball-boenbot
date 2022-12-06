@@ -78,10 +78,12 @@ class HaxballRoom {
 
     // Game Lifecycle
     this.room.onGameStart = (byPlayer) => {
-      this.roomConfig = {
-        ballRadius: this.room.getDiscProperties(0).radius,
-        playerRadius: this.room.getPlayerDiscProperties(this.room.getPlayerList()[0].id).radius,
-      };
+      this.roomConfig.ballRadius = this.room.getDiscProperties(0).radius;
+
+      const player = this.room.getPlayerList().find((p) => p.team > 0);
+      if (player) {
+        this.roomConfig.playerRadius = this.room.getPlayerDiscProperties(player.id)?.radius;
+      }
 
       this.playerLastActivities.clear();
       this.currentGame = {
@@ -199,6 +201,11 @@ class HaxballRoom {
     };
 
     // Player LifeCycle
+    this.room.onPlayerTeamChange = (changedPlayer, byPlayer) => {
+      if (changedPlayer.team != 0) {
+        this.roomConfig.playerRadius = this.room.getPlayerDiscProperties(changedPlayer.id)?.radius;
+      }
+    };
     this.room.onPlayerActivity = (player) => {
       if (!this.playerLastActivities.has(player.id)) {
         this.playerLastActivities.set(player.id, {
