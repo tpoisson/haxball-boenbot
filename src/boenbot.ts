@@ -313,13 +313,24 @@ class HaxballRoom {
       if (["!shuffle", "!sf"].includes(msg) && player.admin) {
         this.room.stopGame();
         const playerIdList = this.room.getPlayerList().map((p) => p.id);
-        let currentIndex = playerIdList.length,
-          randomIndex;
-        while (currentIndex != 0) {
-          randomIndex = Math.floor(Math.random() * currentIndex);
-          currentIndex--;
-          [playerIdList[currentIndex], playerIdList[randomIndex]] = [playerIdList[randomIndex], playerIdList[currentIndex]];
-        }
+        const originalPlayerIds = [...playerIdList];
+
+        originalPlayerIds.reduce((previous, current, index) => {
+          previous += index % 2 == 0 ? 1 : 2;
+        }, 0);
+
+        let shuffleValid = false;
+        do {
+          let currentIndex = playerIdList.length,
+            randomIndex;
+          while (currentIndex != 0) {
+            randomIndex = Math.floor(Math.random() * currentIndex);
+            currentIndex--;
+            [playerIdList[currentIndex], playerIdList[randomIndex]] = [playerIdList[randomIndex], playerIdList[currentIndex]];
+          }
+
+          shuffleValid = playerIdList.length <= 2 || true;
+        } while (!shuffleValid);
 
         playerIdList.forEach((playerId, index) => this.room.setPlayerTeam(playerId, index % 2 == 0 ? 1 : 2));
         this.room.startGame();
