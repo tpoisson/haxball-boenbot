@@ -140,6 +140,7 @@ class HaxballRoom {
         if (scorer) {
           const isOwnGoal = scorer.team !== team;
           const assist =
+            !isOwnGoal &&
             this.currentGame.previousBallKicker &&
             this.currentGame.previousBallKicker.id !== scorer.id &&
             this.currentGame.previousBallKicker.team === team
@@ -204,24 +205,29 @@ class HaxballRoom {
           }
         });
         // Homme du match
-        const playerMatchData = new Map<number, { points: number; name: string }>();
+        const playerMatchData = new Map<number, { points: number; name: string; goals: number; assists: number; ownGoals: number }>();
         this.currentGame?.scoring.forEach((scoring) => {
           if (!playerMatchData.has(scoring.scorer.id)) {
-            playerMatchData.set(scoring.scorer.id, { points: 0, name: scoring.scorer.name });
+            playerMatchData.set(scoring.scorer.id, { points: 0, goals: 0, assists: 0, ownGoals: 0, name: scoring.scorer.name });
           }
           playerMatchData.get(scoring.scorer.id)!.points += 10 * (scoring.ownGoal ? -0.5 : 1);
+          playerMatchData.get(scoring.scorer.id)!.goals += scoring.ownGoal ? 0 : 1;
+          playerMatchData.get(scoring.scorer.id)!.ownGoals += scoring.ownGoal ? 1 : 0;
           if (scoring.assist) {
             if (!playerMatchData.has(scoring.assist.id)) {
-              playerMatchData.set(scoring.assist.id, { points: 0, name: scoring.assist.name });
+              playerMatchData.set(scoring.assist.id, { points: 0, goals: 0, assists: 0, ownGoals: 0, name: scoring.assist.name });
             }
             playerMatchData.get(scoring.assist.id)!.points += 4;
+            playerMatchData.get(scoring.assist.id)!.assists += 1;
           }
         });
 
         const announcements = [];
         if (playerMatchData.size > 0) {
-          const manOfTheMatch = Array.from(playerMatchData.values()).sort((a, b) => a.points - b.points)[0];
-          announcements.push(`🎖️ Homme du match : ${manOfTheMatch.name}`);
+          const manOfTheMatch = Array.from(playerMatchData.values()).sort((a, b) => b.points - a.points)[0];
+          announcements.push(
+            `🎖️ Homme du match : ${manOfTheMatch.name} ! Avec ${manOfTheMatch.goals} buts / ${manOfTheMatch.assists} passes décivises / ${manOfTheMatch.ownGoals} CSC`,
+          );
         }
 
         // Si le slip d'une équipe a été arraché
