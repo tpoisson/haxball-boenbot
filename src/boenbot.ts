@@ -157,7 +157,7 @@ class HaxballRoom {
           if (isOwnGoal) {
             announcements.push(`⚽🚨 Magnifique CSC, GG ${scorer.name} !`);
           } else {
-            const allScorerGoals = this.currentGame.scoring.filter((scoring) => scoring.scorer.id === scorer.id);
+            const allScorerGoals = this.currentGame.scoring.filter((scoring) => scoring.scorer.id === scorer.id && !scoring.ownGoal);
             if (allScorerGoals.length === 2) {
               announcements.push(`⚽ Doublé de ${scorer.name} !`);
             } else if (allScorerGoals.length === 3) {
