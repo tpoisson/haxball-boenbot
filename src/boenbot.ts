@@ -40,7 +40,8 @@ class HaxballRoom {
   private powerShotConfig = {
     enabled: false,
     timeout: 60 * 2, // This means 2 seconds.
-    powerCoefficient: 2, //Original ball kick speed would be multiplied by this number when power shot is activated.
+    powerCoefficient: 2, // Original ball kick speed would be multiplied by this number when power shot is activated.
+    distanceSensitivity: 1.1, // Percentage of distance
   };
 
   private playerLastActivities = new Map<number, IPlayerActivity>();
@@ -385,7 +386,7 @@ class HaxballRoom {
   }
 
   private getTriggerDistance() {
-    return this.roomConfig.ballRadius! + this.roomConfig.playerRadius! + 0.01;
+    return (this.roomConfig.ballRadius! + this.roomConfig.playerRadius!) * this.powerShotConfig.distanceSensitivity;
   }
 
   private setLastBallToucher() {
@@ -426,6 +427,10 @@ class HaxballRoom {
   }
 
   private checkPowerShot() {
+    if (!this.currentGame) {
+      return;
+    }
+
     const playerTouchingBallId = this.currentGame?.playerTouchingBall?.id;
     const getPlayerDiscProperties = playerTouchingBallId && this.room.getPlayerDiscProperties(playerTouchingBallId);
 
@@ -434,9 +439,11 @@ class HaxballRoom {
       getPlayerDiscProperties &&
       this.pointDistance(getPlayerDiscProperties, this.room.getDiscProperties(0)) < this.getTriggerDistance()
     ) {
-      this.currentGame && (this.currentGame.timePlayerBallTouch += 1);
-
-      if (this.currentGame && this.currentGame.timePlayerBallTouch === this.powerShotConfig.timeout) {
+      this.currentGame.timePlayerBallTouch += 1;
+      if (this.currentGame.timePlayerBallTouch < this.powerShotConfig.timeout) {
+        this.room.setDiscProperties(0, { color: 0x00ff00 });
+      }
+      if (this.currentGame.timePlayerBallTouch === this.powerShotConfig.timeout) {
         this.room.setDiscProperties(0, { color: 0xff00ff });
         this.room.sendAnnouncement(
           `${this.currentGame?.playerTouchingBall?.name} peut envoyer une grosse boulette 🚀⚽ !`,
@@ -446,11 +453,11 @@ class HaxballRoom {
           2,
         ); //Power shot is activated when the player touches to the ball for 3 seconds long.
       }
-      if (this.currentGame && this.currentGame.timePlayerBallTouch >= this.powerShotConfig.timeout) {
+      if (this.currentGame.timePlayerBallTouch >= this.powerShotConfig.timeout) {
         this.currentGame.powerShotActive = true;
       }
     } else {
-      if (this.currentGame && this.currentGame.timePlayerBallTouch != 0) {
+      if (this.currentGame.timePlayerBallTouch != 0) {
         this.currentGame.timePlayerBallTouch = 0;
       }
     }
