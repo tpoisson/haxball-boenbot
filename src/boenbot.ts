@@ -95,6 +95,7 @@ class HaxballRoom {
         scoring: [],
         startTime: new Date(),
         hasKickedOff: false,
+        possessions: [],
       };
     };
     this.room.onGameStop = (byPlayer) => {
@@ -205,6 +206,32 @@ class HaxballRoom {
             this.storePlayerStats(assistIsRegistered.id, false, true);
           }
         });
+
+        const announcements = [];
+
+        // Possession
+        const possessionByTeams = this.currentGame?.possessions.reduce(
+          (result, current) => {
+            const team = current.player.team;
+            const bite = {
+              ...result,
+            };
+            bite[team] += current.ticks;
+            bite.total += current.ticks;
+            return bite;
+          },
+          { "0": 0, "1": 0, "2": 0, total: 0 },
+        );
+        console.log(possessionByTeams);
+        if (possessionByTeams) {
+          announcements.push(
+            `🧮 Possession - 🟥 Rouge ${((possessionByTeams["1"] / possessionByTeams.total) * 100).toFixed(2)} % / 🟦 Bleu ${(
+              (possessionByTeams["2"] / possessionByTeams.total) *
+              100
+            ).toFixed(2)} %`,
+          );
+        }
+
         // Homme du match
         const playerMatchData = new Map<number, { points: number; name: string; goals: number; assists: number; ownGoals: number }>();
         this.currentGame?.scoring.forEach((scoring) => {
@@ -223,7 +250,6 @@ class HaxballRoom {
           }
         });
 
-        const announcements = [];
         if (playerMatchData.size > 0) {
           const manOfTheMatch = Array.from(playerMatchData.values()).sort((a, b) => b.points - a.points)[0];
           announcements.push(
@@ -390,32 +416,37 @@ class HaxballRoom {
   }
 
   private setLastBallToucher() {
+    if (!this.currentGame) {
+      return;
+    }
     const ballPosition = this.room.getBallPosition();
     const playersTouchingBall = this.room
       .getPlayerList()
       .filter((player) => player.team !== 0 && this.pointDistance(player.position, ballPosition) < this.getTriggerDistance());
 
     if (playersTouchingBall.length === 0) {
-      if (this.currentGame) {
-        this.currentGame.powerShotActive = false;
-        if (this.currentGame.playerTouchingBall) {
-          this.room.setDiscProperties(0, { color: this.currentGame.ballColor });
-          this.currentGame.playerTouchingBall = undefined;
-        }
+      this.currentGame.powerShotActive = false;
+      if (this.currentGame.playerTouchingBall) {
+        this.room.setDiscProperties(0, { color: this.currentGame.ballColor });
+        this.currentGame.playerTouchingBall = undefined;
       }
     } else if (playersTouchingBall.length === 1) {
       const player = playersTouchingBall[0];
-      if (this.currentGame && this.currentGame.playerTouchingBall?.id !== player.id) {
+      if (this.currentGame.playerTouchingBall?.id !== player.id) {
         this.currentGame.powerShotActive = false;
         this.currentGame.playerTouchingBall = player;
       }
+      let possession = this.currentGame.possessions.find((possession) => possession.player.id === player.id);
+      if (!possession) {
+        possession = { player: { ...player }, ticks: 0 };
+        this.currentGame.possessions.push(possession);
+      }
+      possession.ticks += 1;
     } else {
-      if (this.currentGame) {
-        this.currentGame.powerShotActive = false;
-        if (this.currentGame.playerTouchingBall) {
-          this.room.setDiscProperties(0, { color: this.currentGame.ballColor });
-          this.currentGame.playerTouchingBall = undefined;
-        }
+      this.currentGame.powerShotActive = false;
+      if (this.currentGame.playerTouchingBall) {
+        this.room.setDiscProperties(0, { color: this.currentGame.ballColor });
+        this.currentGame.playerTouchingBall = undefined;
       }
     }
   }
@@ -587,6 +618,7 @@ interface ICurrentGame {
   scoring: { scorer: PlayerObject; time: number; ownGoal: boolean; assist?: PlayerObject }[];
   startTime: Date;
   endTime?: Date;
+  possessions: { player: PlayerObject; ticks: number }[];
 }
 type MapTypes = "futsal" | "classic" | "sniper" | "training";
 interface ICustomMap {
