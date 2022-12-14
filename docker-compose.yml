@@ -6,6 +6,7 @@ services:
     build:
       context: .
     network_mode: "host"
+    restart: always
     volumes:
       - ./config.json:/app/config.json
       - browser-data:/app/userdatadir
