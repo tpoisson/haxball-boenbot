@@ -43,6 +43,123 @@ class HaxballRoom {
     powerCoefficient: 2, // Original ball kick speed would be multiplied by this number when power shot is activated.
     distanceSensitivity: 1.1, // Percentage of distance
   };
+  private chatCommands: { name: string; commands: string[]; admin: boolean; method: (msg: string) => boolean }[] = [
+    {
+      name: "Voir toutes les commandes",
+      commands: ["!help"],
+      admin: false,
+      method: (msg) => {
+        this.room.sendAnnouncement(this.chatCommands.map((chatCommand) => `${chatCommand.name} : ${chatCommand.commands.join(", ")}`).join("\n"));
+        return true;
+      },
+    },
+    {
+      name: "Activer/Désactiver le powershot",
+      commands: ["!powershot", "!ps"],
+      admin: true,
+      method: (msg) => {
+        this.powerShotConfig.enabled = !this.powerShotConfig.enabled;
+        this.room.sendAnnouncement(`🚀 - ${this.powerShotConfig.enabled ? "Powershot activé ✅" : "Powershot désactivé ❌"} `);
+        return true;
+      },
+    },
+    {
+      name: "Passer en mode futsal",
+      commands: ["!futsal", "!ft"],
+      admin: true,
+      method: (msg) => {
+        this.changeStadium("futsal");
+        return true;
+      },
+    },
+    {
+      name: "Passer en mode entrainement",
+      commands: ["!training", "!tr"],
+      admin: true,
+      method: (msg) => {
+        this.changeStadium("training");
+        return true;
+      },
+    },
+    {
+      name: "Passer en mode sniper",
+      commands: ["!sniper"],
+      admin: true,
+      method: (msg) => {
+        this.changeStadium("sniper");
+        return true;
+      },
+    },
+    {
+      name: "Match - Revanche",
+      commands: ["!rematch", "!rm"],
+      admin: true,
+      method: (msg) => {
+        this.room.stopGame();
+        const players = this.room.getPlayerList();
+        players.forEach((p) => {
+          this.room.setPlayerTeam(p.id, p.team === 1 ? 2 : 1);
+        });
+        this.room.startGame();
+        this.room.sendAnnouncement("📢 Rematch game !", undefined, 0xff00ff, "bold", 2);
+        return true;
+      },
+    },
+    {
+      name: "Match - Reset",
+      commands: ["!reset", "!rs"],
+      admin: true,
+      method: (msg) => {
+        this.room.stopGame();
+        this.room.startGame();
+        this.room.sendAnnouncement("📢 Game reset !", undefined, 0xff00ff, "bold", 2);
+        return true;
+      },
+    },
+    {
+      name: "Match - Shuffle teams",
+      commands: ["!shuffle", "!sf"],
+      admin: true,
+      method: (msg) => {
+        this.room.stopGame();
+        const playerIdList = this.room.getPlayerList().map((p) => p.id);
+        let currentIndex = playerIdList.length,
+          randomIndex;
+        while (currentIndex != 0) {
+          randomIndex = Math.floor(Math.random() * currentIndex);
+          currentIndex--;
+          [playerIdList[currentIndex], playerIdList[randomIndex]] = [playerIdList[randomIndex], playerIdList[currentIndex]];
+        }
+
+        playerIdList.forEach((playerId, index) => this.room.setPlayerTeam(playerId, index % 2 == 0 ? 1 : 2));
+        this.room.startGame();
+        this.room.sendAnnouncement("📢 Teams shuffled !", undefined, 0xff00ff, "bold", 2);
+        return true;
+      },
+    },
+    {
+      name: "Voir le classement",
+      commands: ["!top"],
+      admin: false,
+      method: (msg) => {
+        const bite = this.db.transaction(["stats"], "readonly").objectStore("stats").getAll();
+        bite.onsuccess = () => {
+          console.log(bite.result);
+          const stats = bite.result as IPlayerStats[];
+          const messages: string[] = stats
+            .sort((a, b) => (b.nbGoals !== a.nbGoals ? b.nbGoals - a.nbGoals : a.nbOwnGoals - b.nbOwnGoals))
+            .map(
+              (playerStats, index) =>
+                `${(index < 3 && ["🥇", "🥈", "🥉"][index]) || "💩"} ${
+                  registeredUsers.find((player) => player.id === playerStats.playerId)?.name
+                } - Buts: ${playerStats.nbGoals} / Assist : ${playerStats.nbAssists} / CSC: ${playerStats.nbOwnGoals}`,
+            );
+          this.room.sendAnnouncement(messages.join("\n"));
+        };
+        return true;
+      },
+    },
+  ];
 
   private playerLastActivities = new Map<number, IPlayerActivity>();
   private idleTimeout = 7 * 1000;
@@ -341,68 +458,17 @@ class HaxballRoom {
     };
 
     this.room.onPlayerChat = (player, msg) => {
-      if (["!powershot", "!ps"].includes(msg) && player.admin) {
-        this.powerShotConfig.enabled = !this.powerShotConfig.enabled;
-        this.room.sendAnnouncement(`🚀 - ${this.powerShotConfig.enabled ? "Powershot activé ✅" : "Powershot désactivé ❌"} `);
-      }
-      if (msg.startsWith("!futsal") && player.admin) {
-        this.changeStadium("futsal");
-        return true;
-      }
-      if (msg.startsWith("!training") && player.admin) {
-        this.changeStadium("training");
-        return true;
-      }
-      if (msg.startsWith("!sniper") && player.admin) {
-        this.changeStadium("sniper");
-        return true;
-      }
-      if (["!rematch", "!rm"].includes(msg) && player.admin) {
-        this.room.stopGame();
-        const players = this.room.getPlayerList();
-        players.forEach((p) => {
-          this.room.setPlayerTeam(p.id, p.team === 1 ? 2 : 1);
-        });
-        this.room.startGame();
-        this.room.sendAnnouncement("📢 Rematch game !", undefined, 0xff00ff, "bold", 2);
-      }
-      if (["!reset", "!rs"].includes(msg) && player.admin) {
-        this.room.stopGame();
-        this.room.startGame();
-        this.room.sendAnnouncement("📢 Game reset !", undefined, 0xff00ff, "bold", 2);
-      }
-      if (["!shuffle", "!sf"].includes(msg) && player.admin) {
-        this.room.stopGame();
-        const playerIdList = this.room.getPlayerList().map((p) => p.id);
-        let currentIndex = playerIdList.length,
-          randomIndex;
-        while (currentIndex != 0) {
-          randomIndex = Math.floor(Math.random() * currentIndex);
-          currentIndex--;
-          [playerIdList[currentIndex], playerIdList[randomIndex]] = [playerIdList[randomIndex], playerIdList[currentIndex]];
+      if (msg.startsWith("!")) {
+        const command = this.chatCommands.find(
+          (chatCommand) => chatCommand.commands.some((command) => msg.startsWith(command)) && (chatCommand.admin ? player.admin : true),
+        );
+        if (command) {
+          return command.method(msg);
+        } else {
+          this.room.sendChat("Cette commande n'existe pas, noob", player.id);
+          return false;
         }
-
-        playerIdList.forEach((playerId, index) => this.room.setPlayerTeam(playerId, index % 2 == 0 ? 1 : 2));
-        this.room.startGame();
-        this.room.sendAnnouncement("📢 Teams shuffled !", undefined, 0xff00ff, "bold", 2);
       }
-      if (msg === "!top") {
-        const bite = this.db.transaction(["stats"], "readonly").objectStore("stats").getAll();
-        bite.onsuccess = () => {
-          console.log(bite.result);
-          const stats = bite.result as IPlayerStats[];
-          const messages: string[] = stats
-            .sort((a, b) => (b.nbGoals !== a.nbGoals ? b.nbGoals - a.nbGoals : a.nbOwnGoals - b.nbOwnGoals))
-            .map(
-              (playerStats, index) =>
-                `${(index < 3 && ["🥇", "🥈", "🥉"][index]) || "💩"} ${
-                  registeredUsers.find((player) => player.id === playerStats.playerId)?.name
-                } - Buts: ${playerStats.nbGoals} / Assist : ${playerStats.nbAssists} / CSC: ${playerStats.nbOwnGoals}`,
-            );
-          this.room.sendAnnouncement(messages.join("\n"));
-        };
-      }
-
       return true;
     };
   }
