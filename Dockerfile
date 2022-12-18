@@ -19,8 +19,6 @@ WORKDIR /app
 
 COPY --from=builder /app/build/* /app/bots/
 
-ADD config.json /app/
-
 EXPOSE 9500
 
 CMD "haxball-server" "open" "-f" "config.json"
