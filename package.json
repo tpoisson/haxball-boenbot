@@ -1,6 +1,7 @@
 {
   "scripts": {
     "build": "npx webpack --config webpack.config.js",
+    "build:watch": "npx webpack --config webpack.config.js --watch",
     "lint": "npx eslint src/",
     "clean": "rm -rf ./build"
   },

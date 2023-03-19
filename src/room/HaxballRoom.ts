@@ -448,8 +448,9 @@ export default class HaxballRoom {
     this.room.getPlayerList().forEach((p) => this.overrideSetPlayerAvatar(p.id, null));
   }
 
-  private getTriggerDistance() {
-    return (this.roomConfig.ballRadius! + this.roomConfig.playerRadius!) * this.powerShotConfig.distanceSensitivity;
+  private getTriggerDistance(playerId: number) {
+    const playerRadius = this.room.getPlayerDiscProperties(playerId).radius;
+    return (this.roomConfig.ballRadius! + playerRadius) * this.powerShotConfig.distanceSensitivity;
   }
 
   private setLastBallToucher() {
@@ -459,7 +460,7 @@ export default class HaxballRoom {
     const ballPosition = this.room.getBallPosition();
     const playersTouchingBall = this.room
       .getPlayerList()
-      .filter((player) => player.team !== 0 && this.pointDistance(player.position, ballPosition) < this.getTriggerDistance());
+      .filter((player) => player.team !== 0 && this.pointDistance(player.position, ballPosition) < this.getTriggerDistance(player.id));
 
     if (playersTouchingBall.length === 0) {
       this.currentGame.powerShotActive = false;
@@ -517,9 +518,13 @@ export default class HaxballRoom {
     if (
       playerTouchingBallId &&
       getPlayerDiscProperties &&
-      this.pointDistance(getPlayerDiscProperties, this.room.getDiscProperties(0)) < this.getTriggerDistance()
+      this.pointDistance(getPlayerDiscProperties, this.room.getDiscProperties(0)) < this.getTriggerDistance(playerTouchingBallId)
     ) {
       this.currentGame.timePlayerBallTouch += 1;
+      const coeff = 600;
+      this.room.setPlayerDiscProperties(playerTouchingBallId, {
+        radius: this.roomConfig.playerRadius! * ((coeff + this.currentGame.timePlayerBallTouch) / coeff),
+      });
       if (this.currentGame.timePlayerBallTouch < this.powerShotConfig.timeout) {
         this.room.setDiscProperties(0, { color: 0x00ff00 });
       }
