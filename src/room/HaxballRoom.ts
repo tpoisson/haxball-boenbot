@@ -1,6 +1,7 @@
 // https://github.com/haxball/haxball-issues/wiki/Headless-Host
 import { maps } from "../data/maps";
 import { registeredUsers } from "../data/users";
+import IChatCommand from "../models/IChatCommand";
 import { ICurrentGame } from "../models/ICurrentGame";
 import { MapTypes } from "../models/ICustomMap";
 import { IPlayerActivity, IPlayerStats } from "../models/IPlayer";
@@ -13,7 +14,7 @@ export default class HaxballRoom {
     powerCoefficient: 2, // Original ball kick speed would be multiplied by this number when power shot is activated.
     distanceSensitivity: 1.1, // Percentage of distance
   };
-  private chatCommands: { name: string; commands: string[]; admin: boolean; method: (msg: string) => boolean }[] = [
+  private chatCommands: IChatCommand[] = [
     {
       name: "Voir toutes les commandes",
       commands: ["!help"],
