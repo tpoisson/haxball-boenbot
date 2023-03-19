@@ -436,8 +436,8 @@ export default class HaxballRoom {
           return command.method(msg);
         } else {
           this.room.sendChat("Cette commande n'existe pas, noob", player.id);
-          return false;
         }
+        return false;
       }
       return true;
     };
@@ -479,10 +479,22 @@ export default class HaxballRoom {
       }
       possession.ticks += 1;
     } else {
-      this.currentGame.powerShotActive = false;
-      if (this.currentGame.playerTouchingBall) {
-        this.room.setDiscProperties(0, { color: this.currentGame.ballColor });
-        this.currentGame.playerTouchingBall = undefined;
+      if (this.currentGame) {
+        const teamTouchingBall = playersTouchingBall[0].team;
+
+        if (playersTouchingBall.every((player) => player.team === teamTouchingBall)) {
+          if (!this.currentGame.powerShotActive) {
+            this.currentGame.powerShotActive = true;
+            this.room.setDiscProperties(0, { color: 0xff00ff });
+            this.room.sendAnnouncement(`TIR DE L'AIGLE DISPO 🚀⚽ !`, undefined, 0x00ff00, "italic", 2);
+          }
+        } else {
+          this.currentGame.powerShotActive = false;
+          if (this.currentGame.playerTouchingBall) {
+            this.room.setDiscProperties(0, { color: this.currentGame.ballColor });
+            this.currentGame.playerTouchingBall = undefined;
+          }
+        }
       }
     }
   }
