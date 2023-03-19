@@ -1,4 +1,6 @@
 // https://github.com/haxball/haxball-issues/wiki/Headless-Host
+import isEqual from "lodash.isequal";
+
 import { maps } from "../data/maps";
 import { registeredUsers } from "../data/users";
 import IChatCommand from "../models/IChatCommand";
@@ -94,13 +96,20 @@ export default class HaxballRoom {
       method: (msg) => {
         this.room.stopGame();
         const playerIdList = this.room.getPlayerList().map((p) => p.id);
-        let currentIndex = playerIdList.length,
-          randomIndex;
-        while (currentIndex != 0) {
-          randomIndex = Math.floor(Math.random() * currentIndex);
-          currentIndex--;
-          [playerIdList[currentIndex], playerIdList[randomIndex]] = [playerIdList[randomIndex], playerIdList[currentIndex]];
-        }
+        const originalPlayerIds = [...playerIdList];
+
+        let shuffleValid = false;
+        do {
+          let currentIndex = playerIdList.length,
+            randomIndex;
+          while (currentIndex != 0) {
+            randomIndex = Math.floor(Math.random() * currentIndex);
+            currentIndex--;
+            [playerIdList[currentIndex], playerIdList[randomIndex]] = [playerIdList[randomIndex], playerIdList[currentIndex]];
+          }
+
+          shuffleValid = playerIdList.length <= 2 || !isEqual(originalPlayerIds, playerIdList);
+        } while (!shuffleValid);
 
         playerIdList.forEach((playerId, index) => this.room.setPlayerTeam(playerId, index % 2 == 0 ? 1 : 2));
         this.room.startGame();

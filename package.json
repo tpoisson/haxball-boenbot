@@ -7,6 +7,7 @@
   },
   "devDependencies": {
     "@types/haxball-headless-browser": "^0.2.0",
+    "@types/lodash.isequal": "^4.5.6",
     "@types/node": "^18.15.3",
     "@typescript-eslint/eslint-plugin": "^5.55.0",
     "@typescript-eslint/parser": "^5.55.0",
@@ -18,5 +19,7 @@
     "typescript": "^5.0.2",
     "webpack-cli": "^5.0.1"
   },
-  "dependencies": {}
+  "dependencies": {
+    "lodash.isequal": "^4.5.0"
+  }
 }
