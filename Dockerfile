@@ -4,6 +4,7 @@ WORKDIR /app
 
 ADD tsconfig.json /app/
 ADD package*.json /app
+ADD webpack.config.js /app
 ADD src /app/src
 
 RUN npm ci
