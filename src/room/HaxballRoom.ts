@@ -405,6 +405,9 @@ export default class HaxballRoom {
         registeredUsers.find((p) => p.publicIds.includes(newPlayer.auth)) || registeredUsers.find((p) => p.name === newPlayer.name);
       if (registeredUser) {
         registeredUser.sessionId = newPlayer.id;
+        if (registeredUser.superAdmin) {
+          this.room.setPlayerAdmin(newPlayer.id, true);
+        }
       }
 
       const greetingMessage = registeredUser ? `✅ ${this.getGreeting(registeredUser)}` : `Bienvenue ${newPlayer.name} !`;
