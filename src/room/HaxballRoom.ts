@@ -23,7 +23,7 @@ export default class HaxballRoom {
       admin: false,
       method: (msg) => {
         this.room.sendAnnouncement(this.chatCommands.map((chatCommand) => `${chatCommand.name} : ${chatCommand.commands.join(", ")}`).join("\n"));
-        return true;
+        return false;
       },
     },
     {
@@ -33,7 +33,7 @@ export default class HaxballRoom {
       method: (msg) => {
         this.powerShotConfig.enabled = !this.powerShotConfig.enabled;
         this.room.sendAnnouncement(`🚀 - ${this.powerShotConfig.enabled ? "Powershot activé ✅" : "Powershot désactivé ❌"} `);
-        return true;
+        return false;
       },
     },
     {
@@ -42,7 +42,7 @@ export default class HaxballRoom {
       admin: true,
       method: (msg) => {
         this.changeStadium("futsal");
-        return true;
+        return false;
       },
     },
     {
@@ -51,7 +51,7 @@ export default class HaxballRoom {
       admin: true,
       method: (msg) => {
         this.changeStadium("training");
-        return true;
+        return false;
       },
     },
     {
@@ -60,7 +60,7 @@ export default class HaxballRoom {
       admin: true,
       method: (msg) => {
         this.changeStadium("sniper");
-        return true;
+        return false;
       },
     },
     {
@@ -75,7 +75,7 @@ export default class HaxballRoom {
         });
         this.room.startGame();
         this.room.sendAnnouncement("📢 Rematch game !", undefined, 0xff00ff, "bold", 2);
-        return true;
+        return false;
       },
     },
     {
@@ -86,7 +86,7 @@ export default class HaxballRoom {
         this.room.stopGame();
         this.room.startGame();
         this.room.sendAnnouncement("📢 Game reset !", undefined, 0xff00ff, "bold", 2);
-        return true;
+        return false;
       },
     },
     {
@@ -114,7 +114,7 @@ export default class HaxballRoom {
         playerIdList.forEach((playerId, index) => this.room.setPlayerTeam(playerId, index % 2 == 0 ? 1 : 2));
         this.room.startGame();
         this.room.sendAnnouncement("📢 Teams shuffled !", undefined, 0xff00ff, "bold", 2);
-        return true;
+        return false;
       },
     },
     {
@@ -136,7 +136,7 @@ export default class HaxballRoom {
             );
           this.room.sendAnnouncement(messages.join("\n"));
         };
-        return true;
+        return false;
       },
     },
   ];
