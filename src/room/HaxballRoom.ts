@@ -533,10 +533,10 @@ export default class HaxballRoom {
       this.pointDistance(getPlayerDiscProperties, this.room.getDiscProperties(0)) < this.getTriggerDistance(playerTouchingBallId)
     ) {
       this.currentGame.timePlayerBallTouch += 1;
-      const coeff = 400;
+      /* const coeff = 400;
       this.room.setPlayerDiscProperties(playerTouchingBallId, {
         radius: this.roomConfig.playerRadius! * ((coeff + this.currentGame.timePlayerBallTouch) / coeff),
-      });
+      });*/
       if (this.currentGame.timePlayerBallTouch < this.powerShotConfig.timeout) {
         this.room.setDiscProperties(0, { color: 0x00ff00 });
       }
