@@ -18,7 +18,7 @@ export default class HaxballRoom {
   };
   private chatCommands: IChatCommand[] = [
     {
-      name: "Voir toutes les commandes",
+      name: "See all chat commands",
       commands: ["!help"],
       admin: false,
       method: (msg) => {
@@ -27,17 +27,26 @@ export default class HaxballRoom {
       },
     },
     {
-      name: "Activer/Désactiver le powershot",
+      name: "Enable/Disable powershot",
       commands: ["!powershot", "!ps"],
       admin: true,
       method: (msg) => {
         this.powerShotConfig.enabled = !this.powerShotConfig.enabled;
-        this.room.sendAnnouncement(`🚀 - ${this.powerShotConfig.enabled ? "Powershot activé ✅" : "Powershot désactivé ❌"} `);
+        this.room.sendAnnouncement(`🚀 - ${this.powerShotConfig.enabled ? "Powershot enabled ✅" : "Powershot disabled ❌"} `);
         return false;
       },
     },
     {
-      name: "Passer en mode futsal",
+      name: "Clear bans",
+      commands: ["!clearbans"],
+      admin: true,
+      method: (msg) => {
+        this.room.clearBans();
+        return false;
+      },
+    },
+    {
+      name: "Futsal mode",
       commands: ["!futsal", "!ft"],
       admin: true,
       method: (msg) => {
@@ -46,7 +55,7 @@ export default class HaxballRoom {
       },
     },
     {
-      name: "Passer en mode entrainement",
+      name: "Training mode",
       commands: ["!training", "!tr"],
       admin: true,
       method: (msg) => {
@@ -55,7 +64,7 @@ export default class HaxballRoom {
       },
     },
     {
-      name: "Passer en mode sniper",
+      name: "Sniper mode",
       commands: ["!sniper"],
       admin: true,
       method: (msg) => {
@@ -64,7 +73,7 @@ export default class HaxballRoom {
       },
     },
     {
-      name: "Match - Revanche",
+      name: "Match - Rematch",
       commands: ["!rematch", "!rm"],
       admin: true,
       method: (msg) => {
@@ -118,7 +127,7 @@ export default class HaxballRoom {
       },
     },
     {
-      name: "Voir le classement",
+      name: "View rankings",
       commands: ["!top"],
       admin: false,
       method: (msg) => {
@@ -215,7 +224,7 @@ export default class HaxballRoom {
             if (player && player.team !== 0) {
               this.playerLastActivities.delete(playerId);
               // this.room.setPlayerTeam(playerId, 0);
-              this.room.sendAnnouncement(`😴 ${player.name} s'est assoupi`);
+              this.room.sendAnnouncement(`😴 ${player.name} is ronpiching`);
             }
           }
         }
@@ -350,14 +359,10 @@ export default class HaxballRoom {
         if (playerMatchData.size > 0) {
           const manOfTheMatch = Array.from(playerMatchData.values()).sort((a, b) => b.points - a.points)[0];
           announcements.push(
-            `🎖️ Homme du match : ${manOfTheMatch.name} ! Avec ${manOfTheMatch.goals} buts / ${manOfTheMatch.assists} passes décivises / ${manOfTheMatch.ownGoals} CSC`,
+            `🎖️ Best player : ${manOfTheMatch.name} ! ${manOfTheMatch.goals} goals / ${manOfTheMatch.assists} assists / ${manOfTheMatch.ownGoals} own goals`,
           );
         }
 
-        // Si le slip d'une équipe a été arraché
-        if (scores.blue === 0 || scores.red === 0) {
-          announcements.push("🍆 Mais c'est une pétée ?");
-        }
         this.room.sendAnnouncement(announcements.join("\n"), undefined, 0xff00ff, "bold", 2);
       }
     };
@@ -500,7 +505,7 @@ export default class HaxballRoom {
           if (!this.currentGame.powerShotActive) {
             this.currentGame.powerShotActive = true;
             this.room.setDiscProperties(0, { color: 0xff00ff });
-            this.room.sendAnnouncement(`TIR DE L'AIGLE DISPO 🚀⚽ !`, undefined, 0x00ff00, "italic", 2);
+            this.room.sendAnnouncement(`Twin shot available 🚀⚽ !`, undefined, 0x00ff00, "italic", 2);
           }
         } else {
           this.currentGame.powerShotActive = false;
@@ -542,13 +547,7 @@ export default class HaxballRoom {
       }
       if (this.currentGame.timePlayerBallTouch === this.powerShotConfig.timeout) {
         this.room.setDiscProperties(0, { color: 0xff00ff });
-        this.room.sendAnnouncement(
-          `${this.currentGame?.playerTouchingBall?.name} peut envoyer une grosse boulette 🚀⚽ !`,
-          undefined,
-          0x00ff00,
-          "italic",
-          2,
-        ); //Power shot is activated when the player touches to the ball for 3 seconds long.
+        this.room.sendAnnouncement(`Powershot available 🚀⚽ !`, undefined, 0x00ff00, "italic", 2); //Power shot is activated when the player touches to the ball for 3 seconds long.
       }
       if (this.currentGame.timePlayerBallTouch >= this.powerShotConfig.timeout) {
         this.currentGame.powerShotActive = true;
