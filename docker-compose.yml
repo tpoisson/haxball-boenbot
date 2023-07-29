@@ -8,7 +8,7 @@ services:
     network_mode: "host"
     restart: always
     volumes:
-      - ./config.json:/app/config.json
+      - ./config:/app/config
       - browser-data:/app/userdatadir
 
 
