@@ -139,9 +139,8 @@ export default class HaxballRoom {
             .sort((a, b) => (b.nbGoals !== a.nbGoals ? b.nbGoals - a.nbGoals : a.nbOwnGoals - b.nbOwnGoals))
             .map(
               (playerStats, index) =>
-                `${(index < 3 && ["🥇", "🥈", "🥉"][index]) || "💩"} ${
-                  registeredUsers.find((player) => player.id === playerStats.playerId)?.name
-                } - Buts: ${playerStats.nbGoals} / Assist : ${playerStats.nbAssists} / CSC: ${playerStats.nbOwnGoals}`,
+                `${(index < 3 && ["🥇", "🥈", "🥉"][index]) || "💩"} ${registeredUsers.find((player) => player.id === playerStats.playerId)
+                  ?.name} - Buts: ${playerStats.nbGoals} / Assist : ${playerStats.nbAssists} / CSC: ${playerStats.nbOwnGoals}`,
             );
           this.room.sendAnnouncement(messages.join("\n"));
         };
