@@ -5,11 +5,12 @@ import { registeredUsers } from "../data/users";
 import IChatCommand from "../models/IChatCommand";
 import { ICurrentGame } from "../models/ICurrentGame";
 import { MapTypes } from "../models/ICustomMap";
-import { IPlayerActivity, IPlayerStats } from "../models/IPlayer";
+import { IPlayerStats } from "../models/IPlayer";
 import { RegisteredUser } from "../models/RegisteredUser";
 import { OffsidePlugin } from "../plugins/off-side";
 import RoomPlugin from "./room-plugin";
 import { BlinkOnGoalPlugin } from "../plugins/blink-on-goal";
+import { IdlePlayerPlugin } from "../plugins/idle-player";
 
 // https://github.com/haxball/haxball-issues/wiki/Headless-Host
 // https://github.com/haxball/haxball-issues/wiki/Headless-Host-Changelog
@@ -153,9 +154,6 @@ export default class HaxballRoom {
     },
   ];
 
-  private playerLastActivities = new Map<number, IPlayerActivity>();
-  private idleTimeout = 7 * 1000;
-
   private room: RoomObject;
   private currentNbPlayers = 0;
 
@@ -192,6 +190,7 @@ export default class HaxballRoom {
 
     // Game Lifecycle
     this.room.onGameStart = (byPlayer) => {
+      this.plugins.forEach((plugin) => plugin.onGameStart(byPlayer));
       this.roomConfig.ballRadius = this.room.getDiscProperties(0).radius;
 
       const player = this.room.getPlayerList().find((p) => p.team > 0);
@@ -199,7 +198,6 @@ export default class HaxballRoom {
         this.roomConfig.playerRadius = this.room.getPlayerDiscProperties(player.id)?.radius;
       }
 
-      this.playerLastActivities.clear();
       this.currentGame = {
         ballColor: this.room.getDiscProperties(0).color,
         isGameTime: true,
@@ -220,23 +218,11 @@ export default class HaxballRoom {
       this.currentGame!.isGameTime = false;
     };
     this.room.onGameUnpause = (byPlayer) => {
+      this.plugins.forEach((plugin) => plugin.onGameUnpause(byPlayer));
       this.currentGame!.isGameTime = true;
-      this.playerLastActivities.clear();
     };
     this.room.onGameTick = () => {
-      if (this.currentGame?.isGameTime && !this.isTrainingMode) {
-        for (const [playerId, playerData] of this.playerLastActivities) {
-          if (new Date().getTime() - playerData.date.getTime() > this.idleTimeout) {
-            const player = this.room.getPlayer(playerId);
-            if (player && player.team !== 0) {
-              this.playerLastActivities.delete(playerId);
-              // this.room.setPlayerTeam(playerId, 0);
-              this.room.sendAnnouncement(`😴 ${player.name} is ronpiching`);
-            }
-          }
-        }
-      }
-
+      this.plugins.forEach((plugin) => plugin.onGameTick());
       if (this.currentGame?.isGameTime && this.room.getScores() && this.room.getPlayerList().some((p) => p.team != 0)) {
         if (this.currentGame?.playerTouchingBall && this.powerShotConfig.enabled && this.currentGame?.hasKickedOff === true) {
           this.checkPowerShot();
@@ -382,7 +368,6 @@ export default class HaxballRoom {
         this.currentGame.previousBallKicker = undefined;
         this.currentGame.hasKickedOff = false;
       }
-      this.playerLastActivities.clear();
     };
 
     // Player LifeCycle
@@ -392,12 +377,7 @@ export default class HaxballRoom {
       }
     };
     this.room.onPlayerActivity = (player) => {
-      if (!this.playerLastActivities.has(player.id)) {
-        this.playerLastActivities.set(player.id, {
-          date: new Date(),
-        });
-      }
-      this.playerLastActivities.get(player.id)!.date = new Date();
+      this.plugins.forEach((plugin) => plugin.onPlayerActivity(player));
     };
 
     this.room.onPlayerJoin = (newPlayer) => {
@@ -472,7 +452,7 @@ export default class HaxballRoom {
   }
 
   private initPlugins() {
-    [new OffsidePlugin(this.room), new BlinkOnGoalPlugin(this.room)].forEach((plugin) => {
+    [new OffsidePlugin(this.room), new BlinkOnGoalPlugin(this.room), new IdlePlayerPlugin(this.room)].forEach((plugin) => {
       this.chatCommands.push(...plugin.getChatsCommands());
       this.plugins.push(plugin);
     });
