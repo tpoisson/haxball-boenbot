@@ -6,10 +6,9 @@ export default abstract class RoomPlugin {
   constructor(room: RoomObject) {
     this.room = room;
   }
-  public getChatsCommands(): IChatCommand[] {
-    return [];
-  }
+  abstract getChatsCommands(): IChatCommand[];
 
+  public onPositionsReset(): void {}
   public onTeamGoal(team: TeamID): void {}
   public onTeamVictory(scores: ScoresObject): void {}
   public onGameStop(byPlayer: PlayerObject): void {}

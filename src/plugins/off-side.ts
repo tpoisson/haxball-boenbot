@@ -34,17 +34,14 @@ export class OffsidePlugin extends RoomPlugin {
 
   onPlayersBallTouch(byPlayers: PlayerObject[]): void {
     if (this.shouldCheckOffside && this.kicker && byPlayers.length && this.playersPositionWhenKicked?.length) {
-      console.info("Plugin onPlayersBallTouch");
       this.shouldCheckOffside = false;
       const teammate = byPlayers.find((byPlayer) => byPlayer.team === this.kicker!.team && byPlayer.id !== this.kicker!.id);
 
       // If this is a pass
       if (teammate) {
-        console.error("teammate");
         const teamMatePositionWhenPassing = this.playersPositionWhenKicked.find((player) => player.id === teammate.id);
         const opponentsPositionsWhenPassing = this.playersPositionWhenKicked.filter((player) => player.team !== this.kicker!.team);
         if (teamMatePositionWhenPassing && opponentsPositionsWhenPassing.length) {
-          console.error("teammate + oppenants");
           if (
             this.kicker.team === 1 &&
             teamMatePositionWhenPassing.position.x > 0 && // Teammate in the opponent area
