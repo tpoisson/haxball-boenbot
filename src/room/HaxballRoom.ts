@@ -9,6 +9,7 @@ import { IPlayerActivity, IPlayerStats } from "../models/IPlayer";
 import { RegisteredUser } from "../models/RegisteredUser";
 import { OffsidePlugin } from "../plugins/off-side";
 import RoomPlugin from "./room-plugin";
+import { BlinkOnGoalPlugin } from "../plugins/blink-on-goal";
 
 // https://github.com/haxball/haxball-issues/wiki/Headless-Host
 // https://github.com/haxball/haxball-issues/wiki/Headless-Host-Changelog
@@ -166,8 +167,6 @@ export default class HaxballRoom {
 
   private roomConfig: { ballRadius?: number; playerRadius?: number } = {};
 
-  private blinkInterval?: number;
-
   private plugins = new Array<RoomPlugin>();
 
   constructor(db: IDBDatabase) {
@@ -214,8 +213,6 @@ export default class HaxballRoom {
     };
     this.room.onGameStop = (byPlayer) => {
       this.plugins.forEach((plugin) => plugin.onGameStop(byPlayer));
-      this.clearBlink();
-      this.resetPlayerAvatar();
       this.currentGame!.isGameTime = false;
     };
     this.room.onGamePause = (byPlayer) => {
@@ -291,9 +288,6 @@ export default class HaxballRoom {
           this.room.sendAnnouncement(announcements.join("\n"), undefined, undefined, "bold", 2);
         }
       }
-
-      const avatar = scores.blue === scores.scoreLimit || scores.red === scores.scoreLimit ? "🏆" : "⚽";
-      this.blinkTeamAvatar(team, avatar);
 
       if (this.isMatch()) {
         if ((scores.red === 0 || scores.blue === 0) && (scores.scoreLimit - scores.red === 1 || scores.scoreLimit - scores.blue === 1)) {
@@ -380,6 +374,7 @@ export default class HaxballRoom {
       }
     };
     this.room.onPositionsReset = () => {
+      this.plugins.forEach((plugin) => plugin.onPositionsReset());
       if (this.currentGame) {
         this.currentGame.isGameTime = true;
         this.currentGame.playerTouchingBall = undefined;
@@ -387,8 +382,6 @@ export default class HaxballRoom {
         this.currentGame.previousBallKicker = undefined;
         this.currentGame.hasKickedOff = false;
       }
-      this.clearBlink();
-      this.resetPlayerAvatar();
       this.playerLastActivities.clear();
     };
 
@@ -479,13 +472,10 @@ export default class HaxballRoom {
   }
 
   private initPlugins() {
-    const offsidePlugin = new OffsidePlugin(this.room);
-    this.chatCommands.push(...offsidePlugin.getChatsCommands());
-    this.plugins.push(offsidePlugin);
-  }
-
-  private resetPlayerAvatar() {
-    this.room.getPlayerList().forEach((p) => this.overrideSetPlayerAvatar(p.id, null));
+    [new OffsidePlugin(this.room), new BlinkOnGoalPlugin(this.room)].forEach((plugin) => {
+      this.chatCommands.push(...plugin.getChatsCommands());
+      this.plugins.push(plugin);
+    });
   }
 
   private getTriggerDistance(playerId: number) {
@@ -583,32 +573,6 @@ export default class HaxballRoom {
         this.currentGame.timePlayerBallTouch = 0;
       }
     }
-  }
-
-  private clearBlink() {
-    if (this.blinkInterval) {
-      window.clearInterval(this.blinkInterval);
-      this.blinkInterval = undefined;
-    }
-  }
-
-  private blinkTeamAvatar(team: 0 | 1 | 2, avatar: string) {
-    let i = 0;
-    this.clearBlink();
-    const playerTeam = this.room.getPlayerList().filter((p) => p.team === team);
-
-    const blinkFunction = () => {
-      playerTeam.forEach((p) => this.overrideSetPlayerAvatar(p.id, i % 2 === 0 ? avatar : null));
-      i += 1;
-    };
-    this.blinkInterval = window.setInterval(blinkFunction, 200);
-    blinkFunction();
-  }
-
-  private overrideSetPlayerAvatar(playerId: number, avatar: string | null) {
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore: Unreachable code error
-    this.room.setPlayerAvatar(playerId, avatar);
   }
 
   // On est en match uniquement quand 2 équipes contiennent des joueurs inscrits
