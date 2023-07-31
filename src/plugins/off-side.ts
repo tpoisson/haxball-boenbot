@@ -45,6 +45,7 @@ export class OffsidePlugin extends RoomPlugin {
           if (
             this.kicker.team === 1 &&
             teamMatePositionWhenPassing.position.x > 0 && // Teammate in the opponent area
+            teamMatePositionWhenPassing.position.x > this.kicker.position.x && // Forward pass
             opponentsPositionsWhenPassing.every((opponent) => opponent.position.x < teamMatePositionWhenPassing.position.x)
           ) {
             this.offsideDetected(teamMatePositionWhenPassing);
@@ -52,6 +53,7 @@ export class OffsidePlugin extends RoomPlugin {
           if (
             this.kicker.team === 2 &&
             teamMatePositionWhenPassing.position.x < 0 && // Teammate in the opponent area
+            teamMatePositionWhenPassing.position.x < this.kicker.position.x && // Forward pass
             opponentsPositionsWhenPassing.every((opponent) => opponent.position.x > teamMatePositionWhenPassing.position.x)
           ) {
             this.offsideDetected(teamMatePositionWhenPassing);
