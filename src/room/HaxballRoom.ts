@@ -11,16 +11,12 @@ import { OffsidePlugin } from "../plugins/off-side";
 import RoomPlugin from "./room-plugin";
 import { BlinkOnGoalPlugin } from "../plugins/blink-on-goal";
 import { IdlePlayerPlugin } from "../plugins/idle-player";
+import { PowerShotPlugin } from "../plugins/power-shot";
+import { pointDistance } from "../utils/common";
 
 // https://github.com/haxball/haxball-issues/wiki/Headless-Host
 // https://github.com/haxball/haxball-issues/wiki/Headless-Host-Changelog
 export default class HaxballRoom {
-  private powerShotConfig = {
-    enabled: false,
-    timeout: 60 * 2, // This means 2 seconds.
-    powerCoefficient: 2, // Original ball kick speed would be multiplied by this number when power shot is activated.
-    distanceSensitivity: 1.1, // Percentage of distance
-  };
   private chatCommands: IChatCommand[] = [
     {
       name: "See all chat commands",
@@ -28,16 +24,6 @@ export default class HaxballRoom {
       admin: false,
       method: (msg) => {
         this.room.sendAnnouncement(this.chatCommands.map((chatCommand) => `${chatCommand.name} : ${chatCommand.commands.join(", ")}`).join("\n"));
-        return false;
-      },
-    },
-    {
-      name: "Enable/Disable powershot",
-      commands: ["!powershot", "!ps"],
-      admin: true,
-      method: (msg) => {
-        this.powerShotConfig.enabled = !this.powerShotConfig.enabled;
-        this.room.sendAnnouncement(`🚀 - ${this.powerShotConfig.enabled ? "Powershot enabled ✅" : "Powershot disabled ❌"} `);
         return false;
       },
     },
@@ -159,6 +145,8 @@ export default class HaxballRoom {
 
   private isTrainingMode = false;
 
+  private distanceSensitivity = 1.1; // Percentage of distance
+
   private db: IDBDatabase;
 
   private currentGame?: ICurrentGame;
@@ -199,14 +187,9 @@ export default class HaxballRoom {
       }
 
       this.currentGame = {
-        ballColor: this.room.getDiscProperties(0).color,
         isGameTime: true,
-        timePlayerBallTouch: 0,
-        powerShotActive: false,
         scoring: [],
         startTime: new Date(),
-        hasKickedOff: false,
-        possessions: [],
       };
     };
     this.room.onGameStop = (byPlayer) => {
@@ -223,12 +206,14 @@ export default class HaxballRoom {
     };
     this.room.onGameTick = () => {
       this.plugins.forEach((plugin) => plugin.onGameTick());
-      if (this.currentGame?.isGameTime && this.room.getScores() && this.room.getPlayerList().some((p) => p.team != 0)) {
-        if (this.currentGame?.playerTouchingBall && this.powerShotConfig.enabled && this.currentGame?.hasKickedOff === true) {
-          this.checkPowerShot();
-        }
-        this.setLastBallToucher();
-      }
+      const ballPosition = this.room.getBallPosition();
+      const playersTouchingBall = this.room
+        .getPlayerList()
+        .filter((player) => player.team !== 0 && pointDistance(player.position, ballPosition) < this.getTriggerDistance(player.id));
+
+      this.plugins.forEach((plugin) => {
+        plugin.onPlayersBallTouch(playersTouchingBall);
+      });
     };
 
     // Match LifeCycle
@@ -308,6 +293,7 @@ export default class HaxballRoom {
 
         const announcements = [];
 
+        /*
         // Possession
         const possessionByTeams = this.currentGame?.possessions.reduce(
           (result, current) => {
@@ -321,7 +307,6 @@ export default class HaxballRoom {
           },
           { "0": 0, "1": 0, "2": 0, total: 0 },
         );
-        console.log(possessionByTeams);
         if (possessionByTeams) {
           announcements.push(
             `🧮 Possession - 🟥 Rouge ${((possessionByTeams["1"] / possessionByTeams.total) * 100).toFixed(2)} % / 🟦 Bleu ${(
@@ -329,7 +314,7 @@ export default class HaxballRoom {
               100
             ).toFixed(2)} %`,
           );
-        }
+        }*/
 
         // Homme du match
         const playerMatchData = new Map<number, { points: number; name: string; goals: number; assists: number; ownGoals: number }>();
@@ -366,7 +351,6 @@ export default class HaxballRoom {
         this.currentGame.playerTouchingBall = undefined;
         this.currentGame.lastBallKicker = undefined;
         this.currentGame.previousBallKicker = undefined;
-        this.currentGame.hasKickedOff = false;
       }
     };
 
@@ -415,21 +399,8 @@ export default class HaxballRoom {
     };
 
     this.room.onPlayerBallKick = (player) => {
+      this.plugins.forEach((plugin) => plugin.onPlayerBallKick(player));
       if (this.currentGame) {
-        this.plugins.forEach((plugin) => {
-          plugin.onPlayerBallKick(player);
-        });
-
-        if (this.currentGame.hasKickedOff === false) {
-          this.currentGame.hasKickedOff = true;
-        }
-        if (this.currentGame.playerTouchingBall?.id === player.id && this.currentGame.powerShotActive) {
-          this.room.setDiscProperties(0, {
-            xspeed: this.powerShotConfig.powerCoefficient * this.room.getDiscProperties(0).xspeed,
-            yspeed: this.powerShotConfig.powerCoefficient * this.room.getDiscProperties(0).yspeed,
-          });
-          this.currentGame.powerShotActive = false;
-        }
         this.currentGame.previousBallKicker = this.currentGame.lastBallKicker;
         this.currentGame.lastBallKicker = player;
       }
@@ -452,107 +423,17 @@ export default class HaxballRoom {
   }
 
   private initPlugins() {
-    [new OffsidePlugin(this.room), new BlinkOnGoalPlugin(this.room), new IdlePlayerPlugin(this.room)].forEach((plugin) => {
-      this.chatCommands.push(...plugin.getChatsCommands());
-      this.plugins.push(plugin);
-    });
+    [new OffsidePlugin(this.room), new BlinkOnGoalPlugin(this.room), new IdlePlayerPlugin(this.room), new PowerShotPlugin(this.room)].forEach(
+      (plugin) => {
+        this.chatCommands.push(...plugin.getChatsCommands());
+        this.plugins.push(plugin);
+      },
+    );
   }
 
   private getTriggerDistance(playerId: number) {
     const playerRadius = this.room.getPlayerDiscProperties(playerId).radius;
-    return (this.roomConfig.ballRadius! + playerRadius) * this.powerShotConfig.distanceSensitivity;
-  }
-
-  private setLastBallToucher() {
-    if (!this.currentGame) {
-      return;
-    }
-    const ballPosition = this.room.getBallPosition();
-    const playersTouchingBall = this.room
-      .getPlayerList()
-      .filter((player) => player.team !== 0 && this.pointDistance(player.position, ballPosition) < this.getTriggerDistance(player.id));
-
-    this.plugins.forEach((plugin) => {
-      plugin.onPlayersBallTouch(playersTouchingBall);
-    });
-    if (playersTouchingBall.length === 0) {
-      this.currentGame.powerShotActive = false;
-      if (this.currentGame.playerTouchingBall) {
-        this.room.setDiscProperties(0, { color: this.currentGame.ballColor });
-        this.currentGame.playerTouchingBall = undefined;
-      }
-    } else if (playersTouchingBall.length === 1) {
-      const player = playersTouchingBall[0];
-      if (this.currentGame.playerTouchingBall?.id !== player.id) {
-        this.currentGame.powerShotActive = false;
-        this.currentGame.playerTouchingBall = player;
-      }
-      let possession = this.currentGame.possessions.find((possession) => possession.player.id === player.id);
-      if (!possession) {
-        possession = { player: { ...player }, ticks: 0 };
-        this.currentGame.possessions.push(possession);
-      }
-      possession.ticks += 1;
-    } else {
-      if (this.currentGame) {
-        const teamTouchingBall = playersTouchingBall[0].team;
-
-        if (playersTouchingBall.every((player) => player.team === teamTouchingBall)) {
-          if (!this.currentGame.powerShotActive) {
-            this.currentGame.powerShotActive = true;
-            this.room.setDiscProperties(0, { color: 0xff00ff });
-            this.room.sendAnnouncement(`Twin shot available 🚀⚽ !`, undefined, 0x00ff00, "italic", 2);
-          }
-        } else {
-          this.currentGame.powerShotActive = false;
-          if (this.currentGame.playerTouchingBall) {
-            this.room.setDiscProperties(0, { color: this.currentGame.ballColor });
-            this.currentGame.playerTouchingBall = undefined;
-          }
-        }
-      }
-    }
-  }
-
-  private pointDistance(p1: { x: number; y: number }, p2: { x: number; y: number }) {
-    const d1 = p1.x - p2.x;
-    const d2 = p1.y - p2.y;
-    return Math.sqrt(d1 * d1 + d2 * d2);
-  }
-
-  private checkPowerShot() {
-    if (!this.currentGame) {
-      return;
-    }
-
-    const playerTouchingBallId = this.currentGame?.playerTouchingBall?.id;
-    const getPlayerDiscProperties = playerTouchingBallId && this.room.getPlayerDiscProperties(playerTouchingBallId);
-
-    if (
-      playerTouchingBallId &&
-      getPlayerDiscProperties &&
-      this.pointDistance(getPlayerDiscProperties, this.room.getDiscProperties(0)) < this.getTriggerDistance(playerTouchingBallId)
-    ) {
-      this.currentGame.timePlayerBallTouch += 1;
-      /* const coeff = 400;
-      this.room.setPlayerDiscProperties(playerTouchingBallId, {
-        radius: this.roomConfig.playerRadius! * ((coeff + this.currentGame.timePlayerBallTouch) / coeff),
-      });*/
-      if (this.currentGame.timePlayerBallTouch < this.powerShotConfig.timeout) {
-        this.room.setDiscProperties(0, { color: 0x00ff00 });
-      }
-      if (this.currentGame.timePlayerBallTouch === this.powerShotConfig.timeout) {
-        this.room.setDiscProperties(0, { color: 0xff00ff });
-        this.room.sendAnnouncement(`Powershot available 🚀⚽ !`, undefined, 0x00ff00, "italic", 2); //Power shot is activated when the player touches to the ball for 3 seconds long.
-      }
-      if (this.currentGame.timePlayerBallTouch >= this.powerShotConfig.timeout) {
-        this.currentGame.powerShotActive = true;
-      }
-    } else {
-      if (this.currentGame.timePlayerBallTouch != 0) {
-        this.currentGame.timePlayerBallTouch = 0;
-      }
-    }
+    return (this.roomConfig.ballRadius! + playerRadius) * this.distanceSensitivity;
   }
 
   // On est en match uniquement quand 2 équipes contiennent des joueurs inscrits
