@@ -13,6 +13,7 @@ import { BlinkOnGoalPlugin } from "../plugins/blink-on-goal";
 import { IdlePlayerPlugin } from "../plugins/idle-player";
 import { PowerShotPlugin } from "../plugins/power-shot";
 import { pointDistance } from "../utils/common";
+import { BallPossession } from "../plugins/ball-possession";
 
 // https://github.com/haxball/haxball-issues/wiki/Headless-Host
 // https://github.com/haxball/haxball-issues/wiki/Headless-Host-Changelog
@@ -293,29 +294,6 @@ export default class HaxballRoom {
 
         const announcements = [];
 
-        /*
-        // Possession
-        const possessionByTeams = this.currentGame?.possessions.reduce(
-          (result, current) => {
-            const team = current.player.team;
-            const bite = {
-              ...result,
-            };
-            bite[team] += current.ticks;
-            bite.total += current.ticks;
-            return bite;
-          },
-          { "0": 0, "1": 0, "2": 0, total: 0 },
-        );
-        if (possessionByTeams) {
-          announcements.push(
-            `🧮 Possession - 🟥 Rouge ${((possessionByTeams["1"] / possessionByTeams.total) * 100).toFixed(2)} % / 🟦 Bleu ${(
-              (possessionByTeams["2"] / possessionByTeams.total) *
-              100
-            ).toFixed(2)} %`,
-          );
-        }*/
-
         // Homme du match
         const playerMatchData = new Map<number, { points: number; name: string; goals: number; assists: number; ownGoals: number }>();
         this.currentGame?.scoring.forEach((scoring) => {
@@ -423,12 +401,16 @@ export default class HaxballRoom {
   }
 
   private initPlugins() {
-    [new OffsidePlugin(this.room), new BlinkOnGoalPlugin(this.room), new IdlePlayerPlugin(this.room), new PowerShotPlugin(this.room)].forEach(
-      (plugin) => {
-        this.chatCommands.push(...plugin.getChatsCommands());
-        this.plugins.push(plugin);
-      },
-    );
+    [
+      new OffsidePlugin(this.room),
+      new BlinkOnGoalPlugin(this.room),
+      new IdlePlayerPlugin(this.room),
+      new PowerShotPlugin(this.room),
+      new BallPossession(this.room),
+    ].forEach((plugin) => {
+      this.chatCommands.push(...plugin.getChatsCommands());
+      this.plugins.push(plugin);
+    });
   }
 
   private getTriggerDistance(playerId: number) {

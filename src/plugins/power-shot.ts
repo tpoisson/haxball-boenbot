@@ -68,13 +68,6 @@ export class PowerShotPlugin extends RoomPlugin {
           this.powerShotActive = true;
         }
       }
-      /*
-      let possession = this.currentGame.possessions.find((possession) => possession.player.id === player.id);
-      if (!possession) {
-        possession = { player: { ...player }, ticks: 0 };
-        this.currentGame.possessions.push(possession);
-      }
-      possession.ticks += 1;*/
     } else {
       const teamTouchingBall = playersTouchingBall[0].team;
 
