@@ -30,13 +30,16 @@ export class IdlePlayerPlugin extends RoomPlugin {
     }
     this.playerLastActivities.get(player.id)!.date = new Date();
   }
+
   public onPositionsReset(): void {
+    this.playerLastActivities.clear();
+  }
+  public onGameStart(byPlayer: PlayerObject): void {
     this.playerLastActivities.clear();
   }
   public onGamePause(byPlayer: PlayerObject): void {
     this.playerLastActivities.clear();
   }
-
   public onGameUnpause(byPlayer: PlayerObject): void {
     this.playerLastActivities.clear();
   }
