@@ -3,5 +3,5 @@
 build/
 node_modules/
 
+# Haxball-Server config
 config.json
-config/config.json
