@@ -10,30 +10,33 @@ export class PowerShotPlugin extends RoomPlugin {
     distanceSensitivity: 1.1, // Percentage of distance
   };
 
-  private ballRadius?: number;
   private ballColor?: number;
 
-  private powerShotActive = false;
+  private powerShotAvailable = false;
   private hasKickedOff = false;
   private playerTouchingBall?: PlayerObject;
 
   private timePlayerBallTouch: number = 0;
 
   public onGameStart(byPlayer: PlayerObject): void {
-    this.ballRadius = this.room.getDiscProperties(0).radius;
+    this.hasKickedOff = false;
     this.ballColor = this.room.getDiscProperties(0).color;
+  }
+
+  public onPositionsReset(): void {
+    this.hasKickedOff = false;
   }
 
   public onPlayerBallKick(byPlayer: PlayerObject): void {
     if (this.hasKickedOff === false) {
       this.hasKickedOff = true;
     }
-    if (this.playerTouchingBall?.id === byPlayer.id && this.powerShotActive && this.powerShotConfig.enabled) {
+    if (this.playerTouchingBall?.id === byPlayer.id && this.powerShotAvailable && this.powerShotConfig.enabled) {
       this.room.setDiscProperties(0, {
         xspeed: this.powerShotConfig.powerCoefficient * this.room.getDiscProperties(0).xspeed,
         yspeed: this.powerShotConfig.powerCoefficient * this.room.getDiscProperties(0).yspeed,
       });
-      this.powerShotActive = false;
+      this.powerShotAvailable = false;
     }
   }
 
@@ -43,7 +46,7 @@ export class PowerShotPlugin extends RoomPlugin {
     }
 
     if (playersTouchingBall.length === 0) {
-      this.powerShotActive = false;
+      this.powerShotAvailable = false;
       if (this.playerTouchingBall) {
         this.room.setDiscProperties(0, { color: this.ballColor });
         this.playerTouchingBall = undefined;
@@ -52,7 +55,7 @@ export class PowerShotPlugin extends RoomPlugin {
     } else if (playersTouchingBall.length === 1) {
       const player = playersTouchingBall[0];
       if (this.playerTouchingBall?.id !== player.id) {
-        this.powerShotActive = false;
+        this.powerShotAvailable = false;
         this.playerTouchingBall = player;
         this.timePlayerBallTouch = 0;
       } else {
@@ -65,30 +68,26 @@ export class PowerShotPlugin extends RoomPlugin {
           this.room.sendAnnouncement(`Powershot available 🚀⚽ !`, undefined, 0x00ff00, "italic", 2); //Power shot is activated when the player touches to the ball for 3 seconds long.
         }
         if (this.timePlayerBallTouch >= this.powerShotConfig.timeout) {
-          this.powerShotActive = true;
+          this.powerShotAvailable = true;
         }
       }
     } else {
       const teamTouchingBall = playersTouchingBall[0].team;
 
       if (playersTouchingBall.every((player) => player.team === teamTouchingBall)) {
-        if (!this.powerShotActive) {
-          this.powerShotActive = true;
+        if (!this.powerShotAvailable) {
+          this.powerShotAvailable = true;
           this.room.setDiscProperties(0, { color: 0xff00ff });
           this.room.sendAnnouncement(`Twin shot available 🚀⚽ !`, undefined, 0x00ff00, "italic", 2);
         }
       } else {
-        this.powerShotActive = false;
+        this.powerShotAvailable = false;
         if (this.playerTouchingBall) {
           this.room.setDiscProperties(0, { color: this.ballColor });
           this.playerTouchingBall = undefined;
         }
       }
     }
-  }
-
-  public onPositionsReset(): void {
-    this.hasKickedOff = false;
   }
 
   getChatsCommands(): IChatCommand[] {
