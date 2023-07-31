@@ -22,4 +22,4 @@ COPY --from=builder /app/build/* /app/bots/
 
 EXPOSE 9500
 
-CMD ["haxball-server", "open", "--file", "config/config.json"]
+CMD ["haxball-server", "open", "--file", "config.json"]
