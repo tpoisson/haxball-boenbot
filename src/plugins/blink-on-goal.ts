@@ -1,4 +1,5 @@
 import IChatCommand from "../models/IChatCommand";
+import { PlayerScoreObject } from "../room/HaxballRoom";
 import RoomPlugin from "../room/room-plugin";
 
 export class BlinkOnGoalPlugin extends RoomPlugin {
@@ -18,17 +19,17 @@ export class BlinkOnGoalPlugin extends RoomPlugin {
     this.resetPlayerAvatar();
   }
 
-  public onTeamGoal(team: TeamID): void {
+  public onTeamGoal(scoreHistory: PlayerScoreObject[]): void {
     const scores = this.room.getScores();
     const avatar = scores.blue === scores.scoreLimit || scores.red === scores.scoreLimit ? "🏆" : "⚽";
-    this.blinkTeamAvatar(team, avatar);
+    this.blinkTeamAvatar(scoreHistory.at(scoreHistory.length - 1)!.team, avatar);
   }
 
   private resetPlayerAvatar() {
     this.room.getPlayerList().forEach((p) => this.overrideSetPlayerAvatar(p.id, null));
   }
 
-  private blinkTeamAvatar(team: 0 | 1 | 2, avatar: string) {
+  private blinkTeamAvatar(team: TeamID, avatar: string) {
     let i = 0;
     this.clearBlink();
     const playerTeam = this.room.getPlayerList().filter((p) => p.team === team);

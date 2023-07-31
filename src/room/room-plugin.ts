@@ -1,4 +1,5 @@
 import IChatCommand from "../models/IChatCommand";
+import { PlayerScoreObject } from "./HaxballRoom";
 
 export default abstract class RoomPlugin {
   protected readonly room!: RoomObject;
@@ -10,7 +11,7 @@ export default abstract class RoomPlugin {
 
   public onPositionsReset(): void {}
 
-  public onTeamGoal(team: TeamID): void {}
+  public onTeamGoal(scoreHistory: PlayerScoreObject[]): void {}
   public onTeamVictory(scores: ScoresObject): void {}
 
   public onGameStart(byPlayer: PlayerObject): void {}
