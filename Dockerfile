@@ -1,17 +1,18 @@
-FROM node:lts-alpine as builder
+FROM node:18-alpine as builder
 
 WORKDIR /app
 
-ADD tsconfig.json /app/
 ADD package*.json /app
-ADD webpack.config.js /app
-ADD src /app/src
-
 RUN npm ci
+
+ADD tsconfig.json /app/
+ADD webpack.config.js /app
+
+ADD src /app/src
 
 RUN npm run build
 
-FROM node:lts-bullseye
+FROM node:18-bullseye
 
 RUN apt -qq update && apt -qq install --install-recommends chromium -y
 RUN npm install haxball-server -g
