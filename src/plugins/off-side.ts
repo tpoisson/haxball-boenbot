@@ -1,4 +1,5 @@
 import IChatCommand from "../models/IChatCommand";
+import { PlayerScoreObject } from "../room/HaxballRoom";
 import RoomPlugin from "../room/room-plugin";
 
 export class OffsidePlugin extends RoomPlugin {
@@ -10,20 +11,20 @@ export class OffsidePlugin extends RoomPlugin {
 
   private enabled: boolean = false;
 
-  onTeamGoal(team: TeamID): void {
+  public onTeamGoal(scoreHistory: PlayerScoreObject[]): void {
     this.resetInformation();
   }
-  onTeamVictory(scores: ScoresObject): void {
+  public onTeamVictory(scores: ScoresObject): void {
     this.resetInformation();
   }
-  onGameStop(byPlayer: PlayerObject): void {
+  public onGameStop(byPlayer: PlayerObject): void {
     this.resetInformation();
   }
-  onGamePause(byPlayer: PlayerObject): void {
+  public onGamePause(byPlayer: PlayerObject): void {
     this.resetInformation();
   }
 
-  onPlayerBallKick(byPlayer: PlayerObject): void {
+  public onPlayerBallKick(byPlayer: PlayerObject): void {
     // When a player kicks the ball, the players positions on field are saved so when another player touches the ball, the offside check can be made
     if (this.enabled) {
       this.kicker = structuredClone(byPlayer);
@@ -32,7 +33,7 @@ export class OffsidePlugin extends RoomPlugin {
     }
   }
 
-  onPlayersBallTouch(byPlayers: PlayerObject[]): void {
+  public onPlayersBallTouch(byPlayers: PlayerObject[]): void {
     if (this.shouldCheckOffside && this.kicker && byPlayers.length && this.playersPositionWhenKicked?.length) {
       this.shouldCheckOffside = false;
       const teammate = byPlayers.find((byPlayer) => byPlayer.team === this.kicker!.team && byPlayer.id !== this.kicker!.id);

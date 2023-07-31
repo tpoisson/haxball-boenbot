@@ -12,8 +12,18 @@ import RoomPlugin from "./room-plugin";
 import { BlinkOnGoalPlugin } from "../plugins/blink-on-goal";
 import { IdlePlayerPlugin } from "../plugins/idle-player";
 import { PowerShotPlugin } from "../plugins/power-shot";
-import { pointDistance } from "../utils/common";
+import { isMatch, pointDistance } from "../utils/common";
 import { BallPossession } from "../plugins/ball-possession";
+import { TrollAnnouncementPlugin } from "../plugins/troll-announcement";
+import { GoalAnnouncementPlugin } from "../plugins/goal-announcement";
+
+export type PlayerScoreObject = {
+  scorer: PlayerObject;
+  time: number;
+  ownGoal: boolean;
+  assist?: PlayerObject;
+  team: TeamID;
+};
 
 // https://github.com/haxball/haxball-issues/wiki/Headless-Host
 // https://github.com/haxball/haxball-issues/wiki/Headless-Host-Changelog
@@ -152,6 +162,8 @@ export default class HaxballRoom {
 
   private currentGame?: ICurrentGame;
 
+  private scoring = new Array<PlayerScoreObject>();
+
   private roomConfig: { ballRadius?: number; playerRadius?: number } = {};
 
   private plugins = new Array<RoomPlugin>();
@@ -179,31 +191,23 @@ export default class HaxballRoom {
 
     // Game Lifecycle
     this.room.onGameStart = (byPlayer) => {
-      this.plugins.forEach((plugin) => plugin.onGameStart(byPlayer));
+      this.scoring = [];
       this.roomConfig.ballRadius = this.room.getDiscProperties(0).radius;
-
+      this.currentGame = {};
       const player = this.room.getPlayerList().find((p) => p.team > 0);
       if (player) {
         this.roomConfig.playerRadius = this.room.getPlayerDiscProperties(player.id)?.radius;
       }
-
-      this.currentGame = {
-        isGameTime: true,
-        scoring: [],
-        startTime: new Date(),
-      };
+      this.plugins.forEach((plugin) => plugin.onGameStart(byPlayer));
     };
     this.room.onGameStop = (byPlayer) => {
       this.plugins.forEach((plugin) => plugin.onGameStop(byPlayer));
-      this.currentGame!.isGameTime = false;
     };
     this.room.onGamePause = (byPlayer) => {
       this.plugins.forEach((plugin) => plugin.onGamePause(byPlayer));
-      this.currentGame!.isGameTime = false;
     };
     this.room.onGameUnpause = (byPlayer) => {
       this.plugins.forEach((plugin) => plugin.onGameUnpause(byPlayer));
-      this.currentGame!.isGameTime = true;
     };
     this.room.onGameTick = () => {
       this.plugins.forEach((plugin) => plugin.onGameTick());
@@ -212,6 +216,9 @@ export default class HaxballRoom {
         .getPlayerList()
         .filter((player) => player.team !== 0 && pointDistance(player.position, ballPosition) < this.getTriggerDistance(player.id));
 
+      if (playersTouchingBall.length === 1) {
+        this.currentGame!.playerTouchingBall = playersTouchingBall[0];
+      }
       this.plugins.forEach((plugin) => {
         plugin.onPlayersBallTouch(playersTouchingBall);
       });
@@ -219,66 +226,36 @@ export default class HaxballRoom {
 
     // Match LifeCycle
     this.room.onTeamGoal = (team) => {
-      this.plugins.forEach((plugin) => plugin.onTeamGoal(team));
-      const scores = this.room.getScores();
-      if (this.currentGame) {
-        this.currentGame.isGameTime = false;
-        const scorer = this.currentGame.lastBallKicker || this.currentGame.playerTouchingBall;
+      const scorer = this.currentGame!.lastBallKicker || this.currentGame!.playerTouchingBall;
+      if (scorer) {
+        const scores = this.room.getScores();
 
-        if (scorer) {
-          const isOwnGoal = scorer.team !== team;
-          const assist =
-            !isOwnGoal &&
-            this.currentGame.previousBallKicker &&
-            this.currentGame.previousBallKicker.id !== scorer.id &&
-            this.currentGame.previousBallKicker.team === team
-              ? this.currentGame.previousBallKicker
-              : undefined;
+        const isOwnGoal = scorer.team !== team;
+        const assist =
+          !isOwnGoal &&
+          this.currentGame!.previousBallKicker &&
+          this.currentGame!.previousBallKicker.id !== scorer.id &&
+          this.currentGame!.previousBallKicker.team === team
+            ? this.currentGame!.previousBallKicker
+            : undefined;
 
-          this.currentGame.scoring.push({
-            scorer: { ...scorer },
-            time: scores.time,
-            ownGoal: isOwnGoal,
-            assist: assist ? { ...assist } : undefined,
-          });
-          const announcements = [];
-          if (isOwnGoal) {
-            announcements.push(`⚽🚨 Magnifique CSC, GG ${scorer.name} !`);
-          } else {
-            const allScorerGoals = this.currentGame.scoring.filter((scoring) => scoring.scorer.id === scorer.id && !scoring.ownGoal);
-            if (allScorerGoals.length === 2) {
-              announcements.push(`⚽ Doublé de ${scorer.name} !`);
-            } else if (allScorerGoals.length === 3) {
-              announcements.push(`⚽ Triplé de ${scorer.name} !`);
-            } else {
-              announcements.push(`⚽ But de ${scorer.name} !`);
-            }
-          }
-          if (assist) {
-            announcements.push(`🏃🏻 Sur une passe décisive de ${assist.name} !`);
-          }
-          this.room.sendAnnouncement(announcements.join("\n"), undefined, undefined, "bold", 2);
-        }
+        const lastestScore = {
+          scorer: { ...scorer },
+          time: scores.time,
+          ownGoal: isOwnGoal,
+          assist: assist ? { ...assist } : undefined,
+          team,
+        };
+        this.scoring.push(lastestScore);
       }
-
-      if (this.isMatch()) {
-        if ((scores.red === 0 || scores.blue === 0) && (scores.scoreLimit - scores.red === 1 || scores.scoreLimit - scores.blue === 1)) {
-          window.setTimeout(() => {
-            this.room.sendAnnouncement(`📢 Y'a des ${scores.blue === 0 ? "bleus" : "rouges"} ?`, undefined, 0xff00ff, "bold", 2);
-          }, 1000);
-        }
-      }
+      this.plugins.forEach((plugin) => plugin.onTeamGoal(this.scoring));
     };
+
     this.room.onTeamVictory = (scores) => {
       this.plugins.forEach((plugin) => plugin.onTeamVictory(scores));
 
-      if (this.currentGame) {
-        this.currentGame.isGameTime = false;
-        this.currentGame.endTime = new Date();
-      }
-
-      if (this.isMatch()) {
-        this.currentGame?.scoring.forEach((scoring) => {
+      if (isMatch(this.room)) {
+        this.scoring.forEach((scoring) => {
           const scorerIsRegistered = registeredUsers.find((p) => p.sessionId === scoring.scorer.id);
 
           if (scorerIsRegistered) {
@@ -296,7 +273,7 @@ export default class HaxballRoom {
 
         // Homme du match
         const playerMatchData = new Map<number, { points: number; name: string; goals: number; assists: number; ownGoals: number }>();
-        this.currentGame?.scoring.forEach((scoring) => {
+        this.scoring.forEach((scoring) => {
           if (!playerMatchData.has(scoring.scorer.id)) {
             playerMatchData.set(scoring.scorer.id, { points: 0, goals: 0, assists: 0, ownGoals: 0, name: scoring.scorer.name });
           }
@@ -325,7 +302,6 @@ export default class HaxballRoom {
     this.room.onPositionsReset = () => {
       this.plugins.forEach((plugin) => plugin.onPositionsReset());
       if (this.currentGame) {
-        this.currentGame.isGameTime = true;
         this.currentGame.playerTouchingBall = undefined;
         this.currentGame.lastBallKicker = undefined;
         this.currentGame.previousBallKicker = undefined;
@@ -407,6 +383,8 @@ export default class HaxballRoom {
       new IdlePlayerPlugin(this.room),
       new PowerShotPlugin(this.room),
       new BallPossession(this.room),
+      new TrollAnnouncementPlugin(this.room),
+      new GoalAnnouncementPlugin(this.room),
     ].forEach((plugin) => {
       this.chatCommands.push(...plugin.getChatsCommands());
       this.plugins.push(plugin);
@@ -416,14 +394,6 @@ export default class HaxballRoom {
   private getTriggerDistance(playerId: number) {
     const playerRadius = this.room.getPlayerDiscProperties(playerId).radius;
     return (this.roomConfig.ballRadius! + playerRadius) * this.distanceSensitivity;
-  }
-
-  // On est en match uniquement quand 2 équipes contiennent des joueurs inscrits
-  private isMatch() {
-    return (
-      this.room.getPlayerList().some((p) => p.team === 1 && registeredUsers.find((rUser) => rUser.sessionId === p.id)) &&
-      this.room.getPlayerList().some((p) => p.team === 2 && registeredUsers.find((rUser) => rUser.sessionId === p.id))
-    );
   }
 
   private storePlayerStats(registeredUserId: string, isOwnGoal: boolean, isAssist: boolean) {
