@@ -71,11 +71,22 @@ export class OffsidePlugin extends RoomPlugin {
 
   private offsideDetected(offsidePlayer: PlayerObject) {
     this.room.sendAnnouncement(`${offsidePlayer.name} is OFFSIDE !`, undefined, 0xff0000, "bold");
-    // Every falty teammates behind midlane
-    this.room
-      .getPlayerList()
-      .filter((player) => player.team === this.kicker!.team && (offsidePlayer.team === 1 ? player.position.x > 0 : player.position.x < 0))
-      .forEach((player) => this.room.setPlayerDiscProperties(player.id, { x: 0 }));
+    const playerRadius = this.room.getPlayerDiscProperties(offsidePlayer.id).radius;
+
+    this.room.getPlayerList().forEach((player) => {
+      if (player.team > 0) {
+        // Every in-game player
+        if (player.team === this.kicker!.team) {
+          // Faulty team
+          if (offsidePlayer.team === 1 ? player.position.x > 0 : player.position.x < 0) {
+            // Every falty teammates behind midlane
+            this.room.setPlayerDiscProperties(player.id, { x: playerRadius * offsidePlayer.team === 1 ? -1.5 : 1.5 });
+          }
+        }
+        // Every player is stopped
+        this.room.setPlayerDiscProperties(player.id, { xspeed: 0, yspeed: 0 });
+      }
+    });
 
     // Ball replaced on offside
     this.room.setDiscProperties(0, { x: offsidePlayer.position.x, y: offsidePlayer.position.y, xspeed: 0, yspeed: 0 });
@@ -87,10 +98,8 @@ export class OffsidePlugin extends RoomPlugin {
       .sort((p1, p2) => p1.position.x - p2.position.x)
       .at(0);
     this.room.setPlayerDiscProperties(faultKicker!.id, {
-      x: offsidePlayer.position.x + this.room.getPlayerDiscProperties(offsidePlayer.id).radius * (offsidePlayer.team === 1 ? 1 : -1),
+      x: offsidePlayer.position.x + this.room.getPlayerDiscProperties(offsidePlayer.id).radius * (offsidePlayer.team === 1 ? 2 : -2),
       y: offsidePlayer.position.y,
-      xspeed: 0,
-      yspeed: 0,
     });
   }
 
