@@ -3,7 +3,7 @@ import RoomPlugin from "../room/room-plugin";
 import { pointDistance } from "../utils/common";
 
 export class PowerShotPlugin extends RoomPlugin {
-  private powerShotConfig = {
+  private readonly powerShotConfig = {
     enabled: false,
     timeout: 60 * 2, // This means 2 seconds.
     powerCoefficient: 2, // Original ball kick speed would be multiplied by this number when power shot is activated.
