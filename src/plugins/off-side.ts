@@ -14,7 +14,7 @@ export class OffsidePlugin extends RoomPlugin {
   public onTeamGoal(scoreHistory: PlayerScoreObject[]): void {
     this.resetInformation();
   }
-  public onTeamVictory(scores: ScoresObject): void {
+  public onTeamVictory(scoreHistory: PlayerScoreObject[]): void {
     this.resetInformation();
   }
   public onGameStop(byPlayer: PlayerObject): void {

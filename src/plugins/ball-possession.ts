@@ -1,4 +1,5 @@
 import IChatCommand from "../models/IChatCommand";
+import { PlayerScoreObject } from "../room/HaxballRoom";
 import RoomPlugin from "../room/room-plugin";
 
 export class BallPossession extends RoomPlugin {
@@ -20,7 +21,7 @@ export class BallPossession extends RoomPlugin {
     }
   }
 
-  public onTeamVictory(scores: ScoresObject): void {
+  public onTeamVictory(scoreHistory: PlayerScoreObject[]): void {
     const possessionByTeams = this.possessions?.reduce(
       (result, current) => {
         const team = current.player.team;
