@@ -13,6 +13,7 @@ import { TrollAnnouncementPlugin } from "../plugins/troll-announcement";
 import { GoalAnnouncementPlugin } from "../plugins/goal-announcement";
 import { PlayerStatsPlugin } from "../plugins/player-stats";
 import { ChatCommandsPlugin } from "../plugins/chat-commands";
+import { RecordMatchPlugin } from "../plugins/record-match";
 
 export type PlayerScoreObject = {
   scorer: PlayerObject;
@@ -231,6 +232,7 @@ export default class HaxballRoom {
       new TrollAnnouncementPlugin(this.room, this.db),
       new GoalAnnouncementPlugin(this.room, this.db),
       new PlayerStatsPlugin(this.room, this.db),
+      new RecordMatchPlugin(this.room, this.db),
     ].forEach((plugin) => {
       this.chatCommands.push(...plugin.getChatsCommands());
       this.plugins.push(plugin);

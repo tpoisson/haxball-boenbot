@@ -18,10 +18,10 @@ export default abstract class RoomPlugin {
   public onTeamGoal(scoreHistory: PlayerScoreObject[]): void {}
   public onTeamVictory(scoreHistory: PlayerScoreObject[]): void {}
 
-  public onGameStart(byPlayer: PlayerObject): void {}
-  public onGameStop(byPlayer: PlayerObject): void {}
-  public onGamePause(byPlayer: PlayerObject): void {}
-  public onGameUnpause(byPlayer: PlayerObject): void {}
+  public onGameStart(byPlayer: PlayerObject | null): void {}
+  public onGameStop(byPlayer: PlayerObject | null): void {}
+  public onGamePause(byPlayer: PlayerObject | null): void {}
+  public onGameUnpause(byPlayer: PlayerObject | null): void {}
   public onGameTick(): void {}
 
   public onPlayerJoin(newPlayer: PlayerObject): void {}
