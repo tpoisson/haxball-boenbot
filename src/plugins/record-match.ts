@@ -45,7 +45,7 @@ export class RecordMatchPlugin extends RoomPlugin {
       const responseData: { status: boolean; data: { file: { url: { full: string } } } } = await response.json();
       console.log(`Response... ${responseData}`);
       if (responseData.status) {
-        this.room.sendAnnouncement(`Replay available here : ${responseData.data.file.url.full}`);
+        this.room.sendAnnouncement(`📼 Replay available here : ${responseData.data.file.url.full}`, undefined, 0xaaaaaa, undefined, 0);
       }
     } catch (error) {
       this.room.sendAnnouncement(`Error uploading replay : ${error}`);
