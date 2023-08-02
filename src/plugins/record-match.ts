@@ -7,7 +7,7 @@ export class RecordMatchPlugin extends RoomPlugin {
     return [];
   }
 
-  public override onGameStart(byPlayer: PlayerObject | null): void {
+  public override onGameKickoff(byPlayer: PlayerObject): void {
     const shouldRecord = this.room.getPlayerList().some((player) => player.name === "Fish");
     if (shouldRecord) {
       this.isRecording = true;
