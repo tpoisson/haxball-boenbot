@@ -26,6 +26,9 @@ export default abstract class RoomPlugin {
   public onGameKickoffReset(): void {}
   public onGameTick(): void {}
 
+  public onGameOn(): void {}
+  public onGameOff(): void {}
+
   public onPlayerJoin(newPlayer: PlayerObject): void {}
   public onPlayerLeave(leavingPlayer: PlayerObject): void {}
   public onPlayerActivity(player: PlayerObject): void {}

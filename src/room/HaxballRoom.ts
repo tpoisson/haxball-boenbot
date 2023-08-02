@@ -120,12 +120,15 @@ export default class HaxballRoom {
       this.plugins.forEach((plugin) => plugin.onGameStart(byPlayer));
     };
     this.room.onGameStop = (byPlayer) => {
+      this.plugins.forEach((plugin) => plugin.onGameOff());
       this.plugins.forEach((plugin) => plugin.onGameStop(byPlayer));
     };
     this.room.onGamePause = (byPlayer) => {
+      this.plugins.forEach((plugin) => plugin.onGameOff());
       this.plugins.forEach((plugin) => plugin.onGamePause(byPlayer));
     };
     this.room.onGameUnpause = (byPlayer) => {
+      this.plugins.forEach((plugin) => plugin.onGameOn());
       this.plugins.forEach((plugin) => plugin.onGameUnpause(byPlayer));
     };
     this.room.onGameTick = () => {
@@ -145,6 +148,7 @@ export default class HaxballRoom {
 
     // Match LifeCycle
     this.room.onTeamGoal = (team) => {
+      this.plugins.forEach((plugin) => plugin.onGameOff());
       const scorer = this.currentGame!.lastBallKicker || this.currentGame!.playerTouchingBall;
       if (scorer) {
         const scores = this.room.getScores();
@@ -171,6 +175,7 @@ export default class HaxballRoom {
     };
 
     this.room.onTeamVictory = (scores) => {
+      this.plugins.forEach((plugin) => plugin.onGameOff());
       this.plugins.forEach((plugin) => plugin.onTeamVictory(this.scoring));
     };
     this.room.onPositionsReset = () => {
@@ -208,6 +213,7 @@ export default class HaxballRoom {
       if (this.hasKickedOff === false) {
         this.hasKickedOff = true;
         this.plugins.forEach((plugin) => plugin.onGameKickoff(player));
+        this.plugins.forEach((plugin) => plugin.onGameOn());
       }
       this.plugins.forEach((plugin) => plugin.onPlayerBallKick(player));
       if (this.currentGame) {

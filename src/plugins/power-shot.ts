@@ -1,6 +1,5 @@
 import IChatCommand from "../models/IChatCommand";
 import RoomPlugin from "../room/room-plugin";
-import { pointDistance } from "../utils/common";
 
 export class PowerShotPlugin extends RoomPlugin {
   private readonly powerShotConfig = {
