@@ -78,6 +78,8 @@ export default class HaxballRoom {
 
   private scoring = new Array<PlayerScoreObject>();
 
+  private hasKickedOff = false;
+
   private roomConfig: { ballRadius?: number; playerRadius?: number } = {};
 
   private readonly plugins = new Array<RoomPlugin>();
@@ -106,6 +108,9 @@ export default class HaxballRoom {
     // Game Lifecycle
     this.room.onGameStart = (byPlayer) => {
       this.scoring = [];
+      this.hasKickedOff = false;
+      this.plugins.forEach((plugin) => plugin.onGameKickoffReset());
+
       this.roomConfig.ballRadius = this.room.getDiscProperties(0).radius;
       this.currentGame = {};
       const player = this.room.getPlayerList().find((p) => p.team > 0);
@@ -169,6 +174,8 @@ export default class HaxballRoom {
       this.plugins.forEach((plugin) => plugin.onTeamVictory(this.scoring));
     };
     this.room.onPositionsReset = () => {
+      this.hasKickedOff = false;
+      this.plugins.forEach((plugin) => plugin.onGameKickoffReset());
       this.plugins.forEach((plugin) => plugin.onPositionsReset());
       if (this.currentGame) {
         this.currentGame.playerTouchingBall = undefined;
@@ -198,6 +205,10 @@ export default class HaxballRoom {
     };
 
     this.room.onPlayerBallKick = (player) => {
+      if (this.hasKickedOff === false) {
+        this.hasKickedOff = true;
+        this.plugins.forEach((plugin) => plugin.onGameKickoff(player));
+      }
       this.plugins.forEach((plugin) => plugin.onPlayerBallKick(player));
       if (this.currentGame) {
         this.currentGame.previousBallKicker = this.currentGame.lastBallKicker;

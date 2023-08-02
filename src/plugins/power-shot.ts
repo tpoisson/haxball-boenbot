@@ -19,18 +19,18 @@ export class PowerShotPlugin extends RoomPlugin {
   private timePlayerBallTouch: number = 0;
 
   public onGameStart(byPlayer: PlayerObject): void {
-    this.hasKickedOff = false;
     this.ballColor = this.room.getDiscProperties(0).color;
   }
 
-  public onPositionsReset(): void {
+  public onGameKickoff(byPlayer: PlayerObject): void {
+    this.hasKickedOff = true;
+  }
+
+  public onGameKickoffReset(): void {
     this.hasKickedOff = false;
   }
 
   public onPlayerBallKick(byPlayer: PlayerObject): void {
-    if (this.hasKickedOff === false) {
-      this.hasKickedOff = true;
-    }
     if (this.playerTouchingBall?.id === byPlayer.id && this.powerShotAvailable && this.powerShotConfig.enabled) {
       this.room.setDiscProperties(0, {
         xspeed: this.powerShotConfig.powerCoefficient * this.room.getDiscProperties(0).xspeed,
