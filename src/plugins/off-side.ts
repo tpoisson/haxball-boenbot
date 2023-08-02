@@ -67,7 +67,7 @@ export class OffsidePlugin extends RoomPlugin {
   }
 
   private offsideDetected(offsidePlayer: PlayerObject) {
-    this.room.sendAnnouncement(`${offsidePlayer.name} is OFFSIDE !`, undefined, 0xff0000, "bold");
+    this.room.sendAnnouncement(`🏁 ${offsidePlayer.name} is OFFSIDE on ${this.kicker!.name}'s pass !`, undefined, 0xff0000, "bold", 2);
     const playerRadius = this.room.getPlayerDiscProperties(offsidePlayer.id).radius;
 
     this.room.getPlayerList().forEach((player) => {
