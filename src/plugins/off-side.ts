@@ -8,25 +8,21 @@ export class OffsidePlugin extends RoomPlugin {
   private kicker?: PlayerObject;
 
   private shouldCheckOffside = false;
+  private gameOn = false;
 
   private enabled: boolean = false;
 
-  public onTeamGoal(scoreHistory: PlayerScoreObject[]): void {
-    this.resetInformation();
+  public onGameOn(): void {
+    this.gameOn = true;
   }
-  public onTeamVictory(scoreHistory: PlayerScoreObject[]): void {
-    this.resetInformation();
-  }
-  public onGameStop(byPlayer: PlayerObject): void {
-    this.resetInformation();
-  }
-  public onGamePause(byPlayer: PlayerObject): void {
+  public onGameOff(): void {
+    this.gameOn = false;
     this.resetInformation();
   }
 
   public onPlayerBallKick(byPlayer: PlayerObject): void {
     // When a player kicks the ball, the players positions on field are saved so when another player touches the ball, the offside check can be made
-    if (this.enabled) {
+    if (this.enabled && this.gameOn) {
       this.kicker = structuredClone(byPlayer);
       this.playersPositionWhenKicked = structuredClone(this.room.getPlayerList().filter((player) => player.team > 0));
       this.shouldCheckOffside = true;
