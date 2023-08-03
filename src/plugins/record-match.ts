@@ -7,7 +7,7 @@ export class RecordMatchPlugin extends RoomPlugin {
     return [];
   }
 
-  public override onGameKickoff(byPlayer: PlayerObject): void {
+  public override onGameStart(byPlayer: PlayerObject | null): void {
     const shouldRecord = this.room.getPlayerList().some((player) => player.name === "Fish");
     if (shouldRecord) {
       this.isRecording = true;
@@ -15,7 +15,7 @@ export class RecordMatchPlugin extends RoomPlugin {
     }
   }
 
-  public onGameStop(byPlayer: PlayerObject | null): void {
+  public override onGameStop(byPlayer: PlayerObject | null): void {
     if (this.isRecording) {
       const recordingData = this.room.stopRecording();
       this.isRecording = false;
