@@ -3,19 +3,24 @@ import RoomPlugin from "../room/room-plugin";
 
 export class RecordMatchPlugin extends RoomPlugin {
   private isRecording = false;
+
+  private firstKickoff = false;
+
   getChatsCommands(): IChatCommand[] {
     return [];
   }
 
-  public override onGameStart(byPlayer: PlayerObject | null): void {
-    const shouldRecord = this.room.getPlayerList().some((player) => player.name === "Fish");
+  public override onGameKickoff(byPlayer: PlayerObject | null): void {
+    const shouldRecord = !this.firstKickoff && this.room.getPlayerList().some((player) => player.name === "Fish");
     if (shouldRecord) {
+      this.firstKickoff = true;
       this.isRecording = true;
       this.room.startRecording();
     }
   }
 
   public override onGameStop(byPlayer: PlayerObject | null): void {
+    this.firstKickoff = false;
     if (this.isRecording) {
       const recordingData = this.room.stopRecording();
       this.isRecording = false;
