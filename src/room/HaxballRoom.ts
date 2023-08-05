@@ -66,7 +66,6 @@ export default class HaxballRoom {
   ];
 
   private readonly room: RoomObject;
-  private readonly db: IDBDatabase;
 
   private currentNbPlayers = 0;
 
@@ -84,8 +83,7 @@ export default class HaxballRoom {
 
   private readonly plugins = new Array<RoomPlugin>();
 
-  constructor(db: IDBDatabase) {
-    this.db = db;
+  constructor() {
     this.room = HBInit({
       roomName: "Fish 🐠",
       maxPlayers: 16,
@@ -240,19 +238,48 @@ export default class HaxballRoom {
 
   private initPlugins() {
     [
-      new ChatCommandsPlugin(this.room, this.db),
-      new OffsidePlugin(this.room, this.db),
-      new BlinkOnGoalPlugin(this.room, this.db),
-      new IdlePlayerPlugin(this.room, this.db),
-      new PowerShotPlugin(this.room, this.db),
-      new BallPossession(this.room, this.db),
-      new TrollAnnouncementPlugin(this.room, this.db),
-      new GoalAnnouncementPlugin(this.room, this.db),
-      new PlayerStatsPlugin(this.room, this.db),
-      new RecordMatchPlugin(this.room, this.db),
+      new ChatCommandsPlugin(this.room),
+      new OffsidePlugin(this.room),
+      new BlinkOnGoalPlugin(this.room),
+      new IdlePlayerPlugin(this.room),
+      new PowerShotPlugin(this.room),
+      new BallPossession(this.room),
+      new TrollAnnouncementPlugin(this.room),
+      new GoalAnnouncementPlugin(this.room),
+      new PlayerStatsPlugin(this.room),
+      new RecordMatchPlugin(this.room),
     ].forEach((plugin) => {
       this.chatCommands.push(...plugin.getChatsCommands());
       this.plugins.push(plugin);
+    });
+
+    const openDbRequest = window.indexedDB.open("haxball");
+    return new Promise((resolve, reject) => {
+      openDbRequest.onerror = (event) => {
+        console.error("dbRequest error", event);
+        reject(event.target);
+      };
+      openDbRequest.onupgradeneeded = async (ev) => {
+        console.info("DB Upgrade needed !");
+        const db = openDbRequest.result;
+
+        this.plugins.map((plugin) => {
+          plugin.onDatabaseUpgradeNeeded(db);
+        });
+      };
+      openDbRequest.onsuccess = () => {
+        console.info("DB initialized !");
+        const db = openDbRequest.result;
+        db.onerror = (event) => {
+          console.error(`Database error: ${event.target}`);
+        };
+
+        this.plugins.map((plugin) => {
+          plugin.onDatabaseConnectionSuccess(db);
+        });
+
+        resolve(db);
+      };
     });
   }
 

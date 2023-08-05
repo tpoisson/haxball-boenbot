@@ -1,29 +1,39 @@
-export default function initDatabase(): Promise<IDBDatabase> {
-  let db: IDBDatabase;
+export abstract class IndexedBDDAO<T> {
+  private readonly db: IDBDatabase;
+  private readonly storeName: string;
 
-  const dbRequest = window.indexedDB.open("haxball");
+  constructor(db: IDBDatabase, storeName: string) {
+    this.db = db;
+    this.storeName = storeName;
+  }
 
-  return new Promise((resolve, reject) => {
-    dbRequest.onerror = (event) => {
-      console.error("dbRequest error", event);
-      reject(event.target);
-    };
-    dbRequest.onupgradeneeded = () => {
-      console.info("DB Upgrade needed !");
-      const db = dbRequest.result;
-      const objectStore = db.createObjectStore("stats", {
-        autoIncrement: false,
-      });
-      objectStore.createIndex("nbGoals", "nbGoals", { unique: false });
-      objectStore.createIndex("nbOwnGoals", "nbOwnGoals", { unique: false });
-    };
-    dbRequest.onsuccess = () => {
-      console.info("DB initialized !");
-      db = dbRequest.result;
-      db.onerror = (event) => {
-        console.error(`Database error: ${event.target}`);
+  private getTransaction(mode: IDBTransactionMode = "readonly") {
+    return this.db.transaction(this.storeName, mode).objectStore(this.storeName);
+  }
+
+  public get(key: IDBValidKey): Promise<T | undefined> {
+    const request = this.getTransaction().get(key);
+    return this.execRequest(request);
+  }
+
+  public getAll(): Promise<T[] | undefined> {
+    const request = this.getTransaction().getAll();
+    return this.execRequest(request);
+  }
+
+  public put(value: T, key?: IDBValidKey): Promise<IDBValidKey> {
+    const request = this.getTransaction("readwrite").put(value, key);
+    return this.execRequest(request);
+  }
+
+  protected execRequest<T>(request: IDBRequest<T>): Promise<T> {
+    return new Promise((resolve, reject) => {
+      request.onsuccess = (ev) => {
+        resolve(request.result);
       };
-      resolve(db);
-    };
-  });
+      request.onerror = (ev) => {
+        reject(request.error);
+      };
+    });
+  }
 }
