@@ -1,7 +1,5 @@
-import { maps } from "../data/maps";
 import IChatCommand from "../models/IChatCommand";
 import { ICurrentGame } from "../models/ICurrentGame";
-import { MapTypes } from "../models/ICustomMap";
 import { OffsidePlugin } from "../plugins/off-side";
 import RoomPlugin from "./room-plugin";
 import { BlinkOnGoalPlugin } from "../plugins/blink-on-goal";
@@ -14,6 +12,7 @@ import { GoalAnnouncementPlugin } from "../plugins/goal-announcement";
 import { PlayerStatsPlugin } from "../plugins/player-stats";
 import { ChatCommandsPlugin } from "../plugins/chat-commands";
 import { RecordMatchPlugin } from "../plugins/record-match";
+import { StadiumPlugin } from "../plugins/stadium";
 
 export type PlayerScoreObject = {
   scorer: PlayerObject;
@@ -36,40 +35,9 @@ export default class HaxballRoom {
         return false;
       },
     },
-    {
-      name: "Futsal mode",
-      commands: ["!futsal", "!ft"],
-      admin: true,
-      method: (msg) => {
-        this.changeStadium("futsal");
-        return false;
-      },
-    },
-    {
-      name: "Training mode",
-      commands: ["!training", "!tr"],
-      admin: true,
-      method: (msg) => {
-        this.changeStadium("training");
-        return false;
-      },
-    },
-    {
-      name: "Sniper mode",
-      commands: ["!sniper"],
-      admin: true,
-      method: (msg) => {
-        this.changeStadium("sniper");
-        return false;
-      },
-    },
   ];
 
   private readonly room: RoomObject;
-
-  private currentNbPlayers = 0;
-
-  private isTrainingMode = false;
 
   private distanceSensitivity = 1.1; // Percentage of distance
 
@@ -199,12 +167,12 @@ export default class HaxballRoom {
 
     this.room.onPlayerJoin = (newPlayer) => {
       this.plugins.forEach((plugin) => plugin.onPlayerJoin(newPlayer));
-      this.playerListChanged(newPlayer);
+      this.plugins.forEach((plugin) => plugin.playerListChanged(newPlayer));
     };
 
     this.room.onPlayerLeave = (leavingPlayer) => {
       this.plugins.forEach((plugin) => plugin.onPlayerLeave(leavingPlayer));
-      this.playerListChanged();
+      this.plugins.forEach((plugin) => plugin.playerListChanged(leavingPlayer));
     };
 
     this.room.onPlayerBallKick = (player) => {
@@ -248,6 +216,7 @@ export default class HaxballRoom {
       new GoalAnnouncementPlugin(this.room),
       new PlayerStatsPlugin(this.room),
       new RecordMatchPlugin(this.room),
+      new StadiumPlugin(this.room),
     ].forEach((plugin) => {
       this.chatCommands.push(...plugin.getChatsCommands());
       this.plugins.push(plugin);
@@ -286,43 +255,5 @@ export default class HaxballRoom {
   private getTriggerDistance(playerId: number) {
     const playerRadius = this.room.getPlayerDiscProperties(playerId).radius;
     return (this.roomConfig.ballRadius! + playerRadius) * this.distanceSensitivity;
-  }
-
-  // If there are no admins left in the room give admin to one of the remaining players.
-  private playerListChanged(newPlayer?: PlayerObject) {
-    // Get all players
-    const players = this.room.getPlayerList();
-    if (players.length === 0) {
-      this.room.stopGame();
-      return; // No players left, do nothing.
-    }
-    if (players.length === 1 && this.currentNbPlayers === 0) {
-      this.changeStadium("training");
-      this.room.setPlayerTeam(players[0].id, 1);
-      this.room.startGame();
-    }
-    if (newPlayer && this.isTrainingMode) {
-      this.room.setPlayerTeam(newPlayer.id, 1);
-    }
-
-    // Admin
-    if (players.find((player) => player.admin) != null) return; // There's an admin left so do nothing.
-    this.room.setPlayerAdmin(players[0].id, true); // Give admin to the first non admin player in the list
-
-    this.currentNbPlayers = players.length;
-  }
-
-  private changeStadium(type: MapTypes) {
-    this.isTrainingMode = type === "training";
-    const nbPlayers = this.room.getPlayerList().length;
-    const stadium = maps
-      .filter((map) => map.type === type && map.players >= nbPlayers)
-      .sort((a, b) => b.players - a.players)
-      .pop();
-
-    if (stadium) {
-      this.room.stopGame();
-      this.room.setCustomStadium(stadium!.content);
-    }
   }
 }

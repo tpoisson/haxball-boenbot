@@ -28,6 +28,8 @@ export default abstract class RoomPlugin {
   public onGameOn(): void {}
   public onGameOff(): void {}
 
+  public playerListChanged(newPlayer?: PlayerObject): void {}
+
   public onPlayerJoin(newPlayer: PlayerObject): void {}
   public onPlayerLeave(leavingPlayer: PlayerObject): void {}
   public onPlayerActivity(player: PlayerObject): void {}

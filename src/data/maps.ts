@@ -1,4 +1,4 @@
-import { ICustomMap } from "../models/ICustomMap";
+import { ICustomMap } from "../plugins/stadium";
 
 export const maps: ICustomMap[] = [
   {
