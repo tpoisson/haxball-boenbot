@@ -1,5 +1,4 @@
 import IChatCommand from "../models/IChatCommand";
-import { IPlayerStats } from "../models/IPlayer";
 import { PlayerScoreObject } from "../room/HaxballRoom";
 import RoomPlugin from "../room/room-plugin";
 import { isMatch } from "../utils/common";

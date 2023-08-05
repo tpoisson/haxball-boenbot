@@ -2,11 +2,37 @@ import IChatCommand from "../models/IChatCommand";
 import RoomPlugin from "../room/room-plugin";
 import { isMatch } from "../utils/common";
 import { registeredUsers } from "../data/users";
-import { IPlayerStats } from "../models/IPlayer";
 import { RegisteredUser } from "../models/RegisteredUser";
 import { PlayerScoreObject } from "../room/HaxballRoom";
+import { IndexedBDDAO } from "../db/IndexedBD";
+
+interface IPlayerStats {
+  playerId: string;
+  nbGoals: number;
+  nbOwnGoals: number;
+  nbAssists: number;
+}
 
 export class PlayerStatsPlugin extends RoomPlugin {
+  private playerStatsDAO!: PlayerStatsDAO;
+
+  constructor(room: RoomObject) {
+    super(room);
+  }
+
+  public onDatabaseUpgradeNeeded(db: IDBDatabase): void {
+    const objectStore = db.createObjectStore("stats", {
+      keyPath: "playerId",
+      autoIncrement: false,
+    });
+    objectStore.createIndex("nbGoals", "nbGoals", { unique: false });
+    objectStore.createIndex("nbOwnGoals", "nbOwnGoals", { unique: false });
+  }
+
+  public onDatabaseConnectionSuccess(db: IDBDatabase): void {
+    this.playerStatsDAO = new PlayerStatsDAO(db);
+  }
+
   getChatsCommands(): IChatCommand[] {
     return [
       {
@@ -14,24 +40,13 @@ export class PlayerStatsPlugin extends RoomPlugin {
         commands: ["!top"],
         admin: false,
         method: (msg) => {
-          const bite = this.db.transaction(["stats"], "readonly").objectStore("stats").getAll();
-          bite.onsuccess = () => {
-            console.log(bite.result);
-            const stats = bite.result as IPlayerStats[];
-            const messages: string[] = stats
-              .sort((a, b) => (b.nbGoals !== a.nbGoals ? b.nbGoals - a.nbGoals : a.nbOwnGoals - b.nbOwnGoals))
-              .map(
-                (playerStats, index) =>
-                  `${(index < 3 && ["🥇", "🥈", "🥉"][index]) || "💩"} ${registeredUsers.find((player) => player.id === playerStats.playerId)
-                    ?.name} - Buts: ${playerStats.nbGoals} / Assist : ${playerStats.nbAssists} / CSC: ${playerStats.nbOwnGoals}`,
-              );
-            this.room.sendAnnouncement(messages.join("\n"));
-          };
+          this.showTopStats();
           return false;
         },
       },
     ];
   }
+
   public onTeamVictory(scores: PlayerScoreObject[]): void {
     if (isMatch(this.room)) {
       scores.forEach((scoring) => {
@@ -81,12 +96,9 @@ export class PlayerStatsPlugin extends RoomPlugin {
       registeredUser.sessionId = undefined;
     }
   }
-  private storePlayerStats(registeredUserId: string, isOwnGoal: boolean, isAssist: boolean) {
-    const objectStore = this.db.transaction(["stats"], "readwrite").objectStore("stats");
-    const statsRequest = objectStore.get(registeredUserId);
-
-    statsRequest.onsuccess = () => {
-      let playerStats = statsRequest.result as IPlayerStats | undefined;
+  private async storePlayerStats(registeredUserId: string, isOwnGoal: boolean, isAssist: boolean): Promise<void> {
+    try {
+      let playerStats = await this.playerStatsDAO.get(registeredUserId);
       if (!playerStats) {
         playerStats = {
           playerId: registeredUserId,
@@ -104,11 +116,38 @@ export class PlayerStatsPlugin extends RoomPlugin {
           playerStats.nbGoals += 1;
         }
       }
-      objectStore.put(playerStats, registeredUserId);
-    };
+      await this.playerStatsDAO.put(playerStats);
+    } catch (error) {
+      console.error(`Error storePlayerStats ${error}`);
+    }
+  }
+
+  private async showTopStats(): Promise<void> {
+    try {
+      const allStats = await this.playerStatsDAO.getAll();
+
+      if (allStats) {
+        const messages: string[] = allStats
+          .sort((a, b) => (b.nbGoals !== a.nbGoals ? b.nbGoals - a.nbGoals : a.nbOwnGoals - b.nbOwnGoals))
+          .map(
+            (playerStats, index) =>
+              `${(index < 3 && ["🥇", "🥈", "🥉"][index]) || "💩"} ${registeredUsers.find((player) => player.id === playerStats.playerId)
+                ?.name} - Buts: ${playerStats.nbGoals} / Assist : ${playerStats.nbAssists} / CSC: ${playerStats.nbOwnGoals}`,
+          );
+        this.room.sendAnnouncement(messages.join("\n"));
+      }
+    } catch (error) {
+      console.error(`Error showTopStats : ${error}`);
+    }
   }
 
   private getGreeting(player: RegisteredUser) {
     return player.greetings[Math.floor(Math.random() * player.greetings.length)];
+  }
+}
+
+class PlayerStatsDAO extends IndexedBDDAO<IPlayerStats> {
+  constructor(db: IDBDatabase) {
+    super(db, "stats");
   }
 }

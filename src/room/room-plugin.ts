@@ -4,14 +4,13 @@ import { PlayerScoreObject } from "./HaxballRoom";
 export default abstract class RoomPlugin {
   protected readonly room: RoomObject;
 
-  protected readonly db: IDBDatabase;
-
-  constructor(room: RoomObject, db: IDBDatabase) {
+  constructor(room: RoomObject) {
     this.room = room;
-    this.db = db;
   }
 
   abstract getChatsCommands(): IChatCommand[];
+  public onDatabaseUpgradeNeeded(db: IDBDatabase): void {}
+  public onDatabaseConnectionSuccess(db: IDBDatabase): void {}
 
   public onPositionsReset(): void {}
 
