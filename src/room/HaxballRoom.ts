@@ -30,8 +30,11 @@ export default class HaxballRoom {
       name: "See all chat commands",
       commands: ["!help"],
       admin: false,
-      method: (msg) => {
-        this.room.sendAnnouncement(this.chatCommands.map((chatCommand) => `${chatCommand.name} : ${chatCommand.commands.join(", ")}`).join("\n"));
+      method: (msg, player) => {
+        this.room.sendAnnouncement(
+          this.chatCommands.map((chatCommand) => `${chatCommand.name} : ${chatCommand.commands.join(", ")}`).join("\n"),
+          player.id,
+        );
         return false;
       },
     },
@@ -194,9 +197,9 @@ export default class HaxballRoom {
           (chatCommand) => chatCommand.commands.some((command) => msg.startsWith(command)) && (chatCommand.admin ? player.admin : true),
         );
         if (command) {
-          return command.method(msg);
+          return command.method(msg, player);
         } else {
-          this.room.sendChat("Cette commande n'existe pas, noob", player.id);
+          this.room.sendChat("This command does not exist, noob", player.id);
         }
         return false;
       }
@@ -206,7 +209,6 @@ export default class HaxballRoom {
 
   private initPlugins() {
     [
-      new ChatCommandsPlugin(this.room),
       new OffsidePlugin(this.room),
       new BlinkOnGoalPlugin(this.room),
       new IdlePlayerPlugin(this.room),
@@ -217,6 +219,7 @@ export default class HaxballRoom {
       new PlayerStatsPlugin(this.room),
       new RecordMatchPlugin(this.room),
       new StadiumPlugin(this.room),
+      new ChatCommandsPlugin(this.room),
     ].forEach((plugin) => {
       this.chatCommands.push(...plugin.getChatsCommands());
       this.plugins.push(plugin);
