@@ -39,8 +39,8 @@ export class PlayerStatsPlugin extends RoomPlugin {
         name: "View rankings",
         commands: ["!top"],
         admin: false,
-        method: (msg) => {
-          this.showTopStats();
+        method: (msg, player) => {
+          this.showTopStats(player);
           return false;
         },
       },
@@ -122,7 +122,7 @@ export class PlayerStatsPlugin extends RoomPlugin {
     }
   }
 
-  private async showTopStats(): Promise<void> {
+  private async showTopStats(player: PlayerObject): Promise<void> {
     try {
       const allStats = await this.playerStatsDAO.getAll();
 
@@ -134,7 +134,7 @@ export class PlayerStatsPlugin extends RoomPlugin {
               `${(index < 3 && ["🥇", "🥈", "🥉"][index]) || "💩"} ${registeredUsers.find((player) => player.id === playerStats.playerId)
                 ?.name} - Buts: ${playerStats.nbGoals} / Assist : ${playerStats.nbAssists} / CSC: ${playerStats.nbOwnGoals}`,
           );
-        this.room.sendAnnouncement(messages.join("\n"));
+        this.room.sendAnnouncement(messages.join("\n"), player.id);
       }
     } catch (error) {
       console.error(`Error showTopStats : ${error}`);
