@@ -38,6 +38,16 @@ export default class HaxballRoom {
         return false;
       },
     },
+    {
+      name: "Apply room default settings",
+      commands: ["!default", "!ds"],
+      admin: true,
+      method: (msg, player) => {
+        this.room.stopGame();
+        this.applyDefaultSettings();
+        return false;
+      },
+    },
   ];
 
   private readonly room: RoomObject;
@@ -66,13 +76,7 @@ export default class HaxballRoom {
 
     // Plugins
     this.initPlugins();
-
-    this.room.setDefaultStadium("Classic");
-    this.room.setScoreLimit(3);
-    this.room.setTimeLimit(5);
-    // https://haxcolors.com/
-    this.room.setTeamColors(1, 45, 0xffffff, [0xe16d54, 0xe18446, 0xe15a31]);
-    this.room.setTeamColors(2, 45, 0xffffff, [0x669ce2, 0x548be2, 0x0080ff]);
+    this.applyDefaultSettings();
 
     // Game Lifecycle
     this.room.onGameStart = (byPlayer) => {
@@ -205,6 +209,16 @@ export default class HaxballRoom {
       }
       return true;
     };
+  }
+
+  private applyDefaultSettings() {
+    this.room.setScoreLimit(3);
+    this.room.setTimeLimit(5);
+    // https://haxcolors.com/
+    this.room.setTeamColors(1, 45, 0xffffff, [0xe16d54, 0xe18446, 0xe15a31]);
+    this.room.setTeamColors(2, 45, 0xffffff, [0x669ce2, 0x548be2, 0x0080ff]);
+    this.room.setKickRateLimit(2, 0, 0);
+    this.room.sendAnnouncement("Default settings applied !");
   }
 
   private initPlugins() {
