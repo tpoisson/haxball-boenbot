@@ -2,13 +2,13 @@ FROM node:18-alpine as builder
 
 WORKDIR /app
 
-ADD package*.json /app
+COPY package*.json /app
 RUN npm ci
 
-ADD tsconfig.json /app/
-ADD webpack.config.js /app
+COPY tsconfig.json /app/
+COPY webpack.config.js /app
 
-ADD src /app/src
+COPY src /app/src
 
 RUN npm run build
 
@@ -17,7 +17,7 @@ FROM node:18-bullseye
 # https://docs.docker.com/engine/reference/builder/#run---mounttypecache
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
   --mount=type=cache,target=/var/lib/apt,sharing=locked \
-  apt -qq update && apt -qq install --install-recommends chromium -y
+  apt -qq update && apt -qq install --install-recommends chromium -y && rm -rf /var/lib/apt/lists/*
 RUN npm install haxball-server -g
 
 WORKDIR /app
