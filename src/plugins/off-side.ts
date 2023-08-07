@@ -77,9 +77,9 @@ export class OffsidePlugin extends RoomPlugin {
           // Faulty team
           if (offsidePlayer.team === 1 ? player.position.x > 0 : player.position.x < 0) {
             // Every falty teammates behind midlane
-            const minDistance = 3 * playerRadius;
+            const minDistance = 15 * playerRadius;
             const distanceBetweenMidlineAndFault = Math.abs(offsidePlayer.position.x);
-            const xPositionBeforeMidline = Math.max(minDistance, distanceBetweenMidlineAndFault);
+            const xPositionBeforeMidline = Math.max(minDistance - distanceBetweenMidlineAndFault, 0);
             this.room.setPlayerDiscProperties(player.id, { x: xPositionBeforeMidline * (offsidePlayer.team === 1 ? -1 : 1) });
           }
         }
