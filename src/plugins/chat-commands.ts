@@ -1,4 +1,3 @@
-import isEqual from "lodash.isequal";
 import IChatCommand from "../models/IChatCommand";
 import RoomPlugin from "../room/room-plugin";
 
@@ -59,7 +58,7 @@ export class ChatCommandsPlugin extends RoomPlugin {
               [playerIdList[currentIndex], playerIdList[randomIndex]] = [playerIdList[randomIndex], playerIdList[currentIndex]];
             }
 
-            shuffleValid = playerIdList.length <= 2 || !isEqual(originalPlayerIds, playerIdList);
+            shuffleValid = playerIdList.length <= 2 || true;
           } while (!shuffleValid);
 
           playerIdList.forEach((playerId, index) => this.room.setPlayerTeam(playerId, index % 2 == 0 ? 1 : 2));
