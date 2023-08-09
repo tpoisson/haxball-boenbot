@@ -37,6 +37,10 @@ export class PowerShotPlugin extends RoomPlugin {
     this.hasKickedOff = false;
   }
 
+  public override onPlayerJoin(newPlayer: PlayerObject): void {
+    this.room.sendAnnouncement(`🚀 - ${this.powerShotConfig.enabled ? "Powershot enabled ✅" : "Powershot disabled ❌"}`, newPlayer.id, undefined, undefined, 0);
+  }
+
   public onPlayerBallKick(byPlayer: PlayerObject): void {
     if (this.playerTouchingBall?.id === byPlayer.id && this.powerShotAvailable && this.powerShotConfig.enabled) {
       this.room.setDiscProperties(0, {

@@ -1,5 +1,4 @@
 import IChatCommand from "../models/IChatCommand";
-import { PlayerScoreObject } from "../room/HaxballRoom";
 import RoomPlugin from "../room/room-plugin";
 
 export class OffsidePlugin extends RoomPlugin {
@@ -18,6 +17,10 @@ export class OffsidePlugin extends RoomPlugin {
   public onGameOff(): void {
     this.gameOn = false;
     this.resetInformation();
+  }
+
+  public override onPlayerJoin(newPlayer: PlayerObject): void {
+    this.room.sendAnnouncement(`🏁 - ${this.enabled ? "Offside enabled ✅" : "Offside disabled ❌"}`, newPlayer.id, undefined, undefined, 0);
   }
 
   public onPlayerBallKick(byPlayer: PlayerObject): void {
@@ -111,7 +114,7 @@ export class OffsidePlugin extends RoomPlugin {
         admin: true,
         method: (msg) => {
           this.enabled = !this.enabled;
-          this.room.sendAnnouncement(`🏁 - ${this.enabled ? "Offside enabled ✅" : "Offside disabled ❌"} `);
+          this.room.sendAnnouncement(`🏁 - ${this.enabled ? "Offside enabled ✅" : "Offside disabled ❌"}`);
           if (!this.enabled) {
             this.resetInformation();
           }
