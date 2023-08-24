@@ -13,6 +13,7 @@ import { PlayerStatsPlugin } from "../plugins/player-stats";
 import { ChatCommandsPlugin } from "../plugins/chat-commands";
 import { RecordMatchPlugin } from "../plugins/record-match";
 import { StadiumPlugin } from "../plugins/stadium";
+import { ShuffleTeamsPlugins } from "../plugins/shuffle-team";
 
 export type PlayerScoreObject = {
   scorer: PlayerObject;
@@ -66,11 +67,11 @@ export default class HaxballRoom {
 
   constructor() {
     this.room = HBInit({
-      roomName: "Fish 🐠",
+      roomName: "Fish 🐠 TEST SERVER",
       maxPlayers: 16,
       noPlayer: true,
-      password: "bite",
-      public: true,
+      password: undefined,
+      public: false,
       geo: { code: "fr", lat: 50.6, lon: 3.21 },
     });
 
@@ -234,6 +235,7 @@ export default class HaxballRoom {
       new RecordMatchPlugin(this.room),
       new StadiumPlugin(this.room),
       new ChatCommandsPlugin(this.room),
+      new ShuffleTeamsPlugins(this.room, this.db),
     ].forEach((plugin) => {
       this.chatCommands.push(...plugin.getChatsCommands());
       this.plugins.push(plugin);
