@@ -97,13 +97,15 @@ export class OffsidePlugin extends RoomPlugin {
     // One player placed next to it
     const faultKicker = this.room
       .getPlayerList()
-      .filter((player) => player.team !== this.kicker!.team)
+      .filter((player) => player.team > 0 && player.team !== this.kicker!.team)
       .sort((p1, p2) => p1.position.x - p2.position.x)
       .at(0);
-    this.room.setPlayerDiscProperties(faultKicker!.id, {
-      x: offsidePlayer.position.x + this.room.getPlayerDiscProperties(offsidePlayer.id).radius * (offsidePlayer.team === 1 ? 2 : -2),
-      y: offsidePlayer.position.y,
-    });
+    if (faultKicker) {
+      this.room.setPlayerDiscProperties(faultKicker.id, {
+        x: offsidePlayer.position.x + this.room.getPlayerDiscProperties(offsidePlayer.id).radius * (offsidePlayer.team === 1 ? 2 : -2),
+        y: offsidePlayer.position.y,
+      });
+    }
   }
 
   public getChatsCommands(): IChatCommand[] {
