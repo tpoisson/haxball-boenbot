@@ -26,13 +26,19 @@ export class OffsidePlugin extends RoomPlugin {
   public onPlayerBallKick(byPlayer: PlayerObject): void {
     // When a player kicks the ball, the players positions on field are saved so when another player touches the ball, the offside check can be made
     if (this.enabled && this.gameOn) {
-      this.kicker = structuredClone(byPlayer);
-      this.playersPositionWhenKicked = structuredClone(this.room.getPlayerList().filter((player) => player.team > 0));
-      this.shouldCheckOffside = true;
+      if (!this.checkOffside([byPlayer])) {
+        this.kicker = structuredClone(byPlayer);
+        this.playersPositionWhenKicked = structuredClone(this.room.getPlayerList().filter((player) => player.team > 0));
+        this.shouldCheckOffside = true;
+      }
     }
   }
 
   public onPlayersBallTouch(byPlayers: PlayerObject[]): void {
+    this.checkOffside(byPlayers);
+  }
+
+  private checkOffside(byPlayers: PlayerObject[]): boolean {
     if (this.shouldCheckOffside && this.kicker && byPlayers.length && this.playersPositionWhenKicked?.length) {
       this.shouldCheckOffside = false;
       const teammate = byPlayers.find((byPlayer) => byPlayer.team === this.kicker!.team && byPlayer.id !== this.kicker!.id);
@@ -49,6 +55,7 @@ export class OffsidePlugin extends RoomPlugin {
             opponentsPositionsWhenPassing.every((opponent) => opponent.position.x < teamMatePositionWhenPassing.position.x)
           ) {
             this.offsideDetected(teamMatePositionWhenPassing);
+            return true;
           }
           if (
             this.kicker.team === 2 &&
@@ -57,10 +64,12 @@ export class OffsidePlugin extends RoomPlugin {
             opponentsPositionsWhenPassing.every((opponent) => opponent.position.x > teamMatePositionWhenPassing.position.x)
           ) {
             this.offsideDetected(teamMatePositionWhenPassing);
+            return true;
           }
         }
       }
     }
+    return false;
   }
 
   private resetInformation() {
