@@ -23,5 +23,18 @@
         "prettier/prettier": "error",
         "@typescript-eslint/no-explicit-any": "off",
         "@typescript-eslint/no-unused-vars": "off"
-    }
+    },
+    "overrides": [
+        {
+            "files":["test/**/*.ts"],
+            "env": {
+                "mocha": true
+            },
+            "parserOptions": {
+                "project": [
+                    "./tsconfig.test.json"
+                ]
+            },
+        }
+    ]
 }
