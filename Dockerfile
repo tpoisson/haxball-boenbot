@@ -1,13 +1,11 @@
-FROM node:18-alpine as builder
+FROM node:20.18.0-alpine3.20 AS builder
 
 WORKDIR /app
 
 COPY package*.json /app
 
 # https://docs.docker.com/engine/reference/builder/#run---mounttypecache
-RUN --mount=type=cache,target=~/.npm,sharing=locked \
-  --mount=type=cache,target=~/.npm,sharing=locked \
-  npm ci --no-audit --no-fund
+RUN --mount=type=cache,target=~/.npm,sharing=shared npm ci --no-audit --no-fund
 
 COPY tsconfig.json /app/
 COPY webpack.config.js /app
@@ -16,9 +14,9 @@ COPY src /app/src
 
 RUN npm run build
 
-FROM node:18-alpine
+FROM node:20.18.0-alpine3.20
 
-RUN apk --no-cache add chromium
+RUN npx @puppeteer/browsers install chrome@115.0.5790.170
 
 WORKDIR /app
 
