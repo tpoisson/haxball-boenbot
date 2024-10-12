@@ -1,13 +1,11 @@
-FROM node:18-alpine as builder
+FROM node:20.18.0-alpine3.20 AS builder
 
 WORKDIR /app
 
 COPY package*.json /app
 
 # https://docs.docker.com/engine/reference/builder/#run---mounttypecache
-RUN --mount=type=cache,target=~/.npm,sharing=locked \
-  --mount=type=cache,target=~/.npm,sharing=locked \
-  npm ci --no-audit --no-fund
+RUN --mount=type=cache,target=~/.npm,sharing=shared npm ci --no-audit --no-fund
 
 COPY tsconfig.json /app/
 COPY webpack.config.js /app
@@ -16,9 +14,46 @@ COPY src /app/src
 
 RUN npm run build
 
-FROM node:18-alpine
+FROM node:20.18-bookworm-slim
 
-RUN apk --no-cache add chromium
+RUN apt-get update -qq -y && \
+    apt-get install -y \
+    fonts-liberation \
+    libasound2 \
+    libatk-bridge2.0-0 \
+    libatk1.0-0 \
+    libc6 \
+    libcairo2 \
+    libcups2 \
+    libdbus-1-3 \
+    libexpat1 \
+    libfontconfig1 \
+    libgbm1 \
+    libgcc1 \
+    libglib2.0-0 \
+    libgtk-3-0 \
+    libnspr4 \
+    libnss3 \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libstdc++6 \
+    libx11-6 \
+    libx11-xcb1 \
+    libxcb1 \
+    libxcomposite1 \
+    libxcursor1 \
+    libxdamage1 \
+    libxext6 \
+    libxfixes3 \
+    libxi6 \
+    libxrandr2 \
+    libxrender1 \
+    libxss1 \
+    libxtst6 \
+    lsb-release \
+    wget \
+    xdg-utils
+RUN npx @puppeteer/browsers install chrome@115.0.5790.170
 
 WORKDIR /app
 
