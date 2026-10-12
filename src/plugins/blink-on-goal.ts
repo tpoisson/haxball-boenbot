@@ -21,6 +21,9 @@ export class BlinkOnGoalPlugin extends RoomPlugin {
 
   public onTeamGoal(scoreHistory: PlayerScoreObject[]): void {
     const scores = this.room.getScores();
+    if (!scores) {
+      return;
+    }
     const avatar = scores.blue === scores.scoreLimit || scores.red === scores.scoreLimit ? "🏆" : "⚽";
     this.blinkTeamAvatar(scoreHistory.at(scoreHistory.length - 1)!.team, avatar);
   }

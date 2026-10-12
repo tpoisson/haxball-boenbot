@@ -65,20 +65,20 @@ export class PlayerStatsPlugin extends RoomPlugin {
     }
   }
 
-  public onPlayerJoin(newPlayer: PlayerObject): void {
+  public onPlayerJoin(newPlayer: PlayerJoinObject): void {
     const playerList = this.room.getPlayerList();
     const connectedPublicIds = registeredUsers
       .filter((rUser) => playerList.find((p) => p.id !== newPlayer.id && p.id === rUser.sessionId))
       .flatMap((rUser) => rUser.publicIds);
 
-    if (connectedPublicIds.includes(newPlayer.auth)) {
+    if (newPlayer.auth && connectedPublicIds.includes(newPlayer.auth)) {
       this.room.kickPlayer(newPlayer.id, "🍖 Tentative de jambonnage avec une double connexion ?", false);
       return;
     }
 
     // player.auth property is only set in the RoomObject.onPlayerJoin event.
     const registeredUser =
-      registeredUsers.find((p) => p.publicIds.includes(newPlayer.auth)) || registeredUsers.find((p) => p.name === newPlayer.name);
+      registeredUsers.find((p) => newPlayer.auth && p.publicIds.includes(newPlayer.auth)) || registeredUsers.find((p) => p.name === newPlayer.name);
     if (registeredUser) {
       registeredUser.sessionId = newPlayer.id;
       if (registeredUser.superAdmin) {
@@ -131,8 +131,9 @@ export class PlayerStatsPlugin extends RoomPlugin {
           .sort((a, b) => (b.nbGoals !== a.nbGoals ? b.nbGoals - a.nbGoals : a.nbOwnGoals - b.nbOwnGoals))
           .map(
             (playerStats, index) =>
-              `${(index < 3 && ["🥇", "🥈", "🥉"][index]) || "💩"} ${registeredUsers.find((player) => player.id === playerStats.playerId)
-                ?.name} - Buts: ${playerStats.nbGoals} / Assist : ${playerStats.nbAssists} / CSC: ${playerStats.nbOwnGoals}`,
+              `${(index < 3 && ["🥇", "🥈", "🥉"][index]) || "💩"} ${
+                registeredUsers.find((player) => player.id === playerStats.playerId)?.name
+              } - Buts: ${playerStats.nbGoals} / Assist : ${playerStats.nbAssists} / CSC: ${playerStats.nbOwnGoals}`,
           );
         this.room.sendAnnouncement(messages.join("\n"), player.id);
       }

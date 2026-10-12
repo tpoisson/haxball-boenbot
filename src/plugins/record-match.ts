@@ -1,54 +1,54 @@
-import IChatCommand from "../models/IChatCommand";
-import RoomPlugin from "../room/room-plugin";
+// import IChatCommand from "../models/IChatCommand";
+// import RoomPlugin from "../room/room-plugin";
 
-export class RecordMatchPlugin extends RoomPlugin {
-  private isRecording = false;
+// export class RecordMatchPlugin extends RoomPlugin {
+//   private isRecording = false;
 
-  private firstKickoff = false;
+//   private firstKickoff = false;
 
-  getChatsCommands(): IChatCommand[] {
-    return [];
-  }
+//   getChatsCommands(): IChatCommand[] {
+//     return [];
+//   }
 
-  public override onGameKickoff(byPlayer: PlayerObject | null): void {
-    const shouldRecord = !this.firstKickoff && this.room.getPlayerList().some((player) => player.name === "Fish");
-    if (shouldRecord) {
-      this.firstKickoff = true;
-      this.isRecording = true;
-      this.room.startRecording();
-    }
-  }
+//   public override onGameKickoff(byPlayer: PlayerObject | null): void {
+//     const shouldRecord = !this.firstKickoff && this.room.getPlayerList().some((player) => player.name === "Fish");
+//     if (shouldRecord) {
+//       this.firstKickoff = true;
+//       this.isRecording = true;
+//       this.room.startRecording();
+//     }
+//   }
 
-  public override onGameStop(byPlayer: PlayerObject | null): void {
-    this.firstKickoff = false;
-    if (this.isRecording) {
-      const recordingData = this.room.stopRecording();
-      this.isRecording = false;
-      this.uploadData(recordingData);
-    }
-  }
+//   public override onGameStop(byPlayer: PlayerObject | null): void {
+//     this.firstKickoff = false;
+//     if (this.isRecording) {
+//       const recordingData = this.room.stopRecording();
+//       this.isRecording = false;
+//       this.uploadData(recordingData);
+//     }
+//   }
 
-  private async uploadData(recordingData: Uint8Array) {
-    try {
-      const blob = new Blob([new Uint8Array(recordingData)], { type: "application/octet-stream" });
-      const formData = new FormData();
-      formData.append("file", blob, `HBReplay-${new Date().toISOString().replace(/[^0-9A-Z]/gi, "-")}.hbr2`);
-      // https://anonymfile.com/docs/api
-      // https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
-      const response = await window.fetch("https://anonymfile.com/api/v1/upload", {
-        method: "POST",
-        mode: "cors",
-        body: formData,
-        headers: {
-          Expire: "7",
-        },
-      });
-      const responseData: { status: boolean; data: { file: { url: { full: string } } } } = await response.json();
-      if (responseData.status) {
-        this.room.sendAnnouncement(`📼 Replay available here : ${responseData.data.file.url.full}`, undefined, 0xaaaaaa, undefined, 0);
-      }
-    } catch (error) {
-      this.room.sendAnnouncement(`Error uploading replay : ${error}`);
-    }
-  }
-}
+//   private async uploadData(recordingData: Uint8Array) {
+//     try {
+//       const blob = new Blob([new Uint8Array(recordingData)], { type: "application/octet-stream" });
+//       const formData = new FormData();
+//       formData.append("file", blob, `HBReplay-${new Date().toISOString().replace(/[^0-9A-Z]/gi, "-")}.hbr2`);
+//       // https://anonymfile.com/docs/api
+//       // https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
+//       const response = await window.fetch("https://anonymfile.com/api/v1/upload", {
+//         method: "POST",
+//         mode: "cors",
+//         body: formData,
+//         headers: {
+//           Expire: "7",
+//         },
+//       });
+//       const responseData: { status: boolean; data: { file: { url: { full: string } } } } = await response.json();
+//       if (responseData.status) {
+//         this.room.sendAnnouncement(`📼 Replay available here : ${responseData.data.file.url.full}`, undefined, 0xaaaaaa, undefined, 0);
+//       }
+//     } catch (error) {
+//       this.room.sendAnnouncement(`Error uploading replay : ${error}`);
+//     }
+//   }
+// }

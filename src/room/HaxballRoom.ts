@@ -84,7 +84,7 @@ export default class HaxballRoom {
       this.hasKickedOff = false;
       this.plugins.forEach((plugin) => plugin.onGameKickoffReset());
 
-      this.roomConfig.ballRadius = this.room.getDiscProperties(0).radius;
+      this.roomConfig.ballRadius = this.room.getDiscProperties(0)?.radius;
       this.currentGame = {};
       const player = this.room.getPlayerList().find((p) => p.team > 0);
       if (player) {
@@ -109,7 +109,10 @@ export default class HaxballRoom {
       const ballPosition = this.room.getBallPosition();
       const playersTouchingBall = this.room
         .getPlayerList()
-        .filter((player) => player.team !== 0 && pointDistance(player.position, ballPosition) < this.getTriggerDistance(player.id));
+        .filter(
+          (player) =>
+            player.team !== 0 && player.position && ballPosition && pointDistance(player.position, ballPosition) < this.getTriggerDistance(player.id),
+        );
 
       if (playersTouchingBall.length === 1) {
         this.currentGame!.playerTouchingBall = playersTouchingBall[0];
@@ -123,9 +126,9 @@ export default class HaxballRoom {
     this.room.onTeamGoal = (team) => {
       this.plugins.forEach((plugin) => plugin.onGameOff());
       const scorer = this.currentGame!.lastBallKicker || this.currentGame!.playerTouchingBall;
-      if (scorer) {
-        const scores = this.room.getScores();
+      const scores = this.room.getScores();
 
+      if (scorer && scores) {
         const isOwnGoal = scorer.team !== team;
         const assist =
           !isOwnGoal &&

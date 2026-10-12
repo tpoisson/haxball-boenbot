@@ -70,7 +70,7 @@ export class ChatCommandsPlugin extends RoomPlugin {
     ];
   }
 
-  public onPlayerJoin(newPlayer: PlayerObject): void {
+  public onPlayerJoin(newPlayer: PlayerJoinObject): void {
     this.room.sendAnnouncement("Type !help to list all available commands !", newPlayer.id, 0xff00ff, undefined, 2);
   }
 }

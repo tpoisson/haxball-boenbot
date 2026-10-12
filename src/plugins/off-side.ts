@@ -19,7 +19,7 @@ export class OffsidePlugin extends RoomPlugin {
     this.resetInformation();
   }
 
-  public override onPlayerJoin(newPlayer: PlayerObject): void {
+  public override onPlayerJoin(newPlayer: PlayerJoinObject): void {
     this.room.sendAnnouncement(`🏁 - ${this.enabled ? "Offside enabled ✅" : "Offside disabled ❌"}`, newPlayer.id, undefined, undefined, 0);
   }
 
@@ -47,12 +47,14 @@ export class OffsidePlugin extends RoomPlugin {
       if (teammate) {
         const teamMatePositionWhenPassing = this.playersPositionWhenKicked.find((player) => player.id === teammate.id);
         const opponentsPositionsWhenPassing = this.playersPositionWhenKicked.filter((player) => player.team !== this.kicker!.team);
-        if (teamMatePositionWhenPassing && opponentsPositionsWhenPassing.length) {
+        if (teamMatePositionWhenPassing && opponentsPositionsWhenPassing.length && teamMatePositionWhenPassing.position && this.kicker.position) {
           if (
             this.kicker.team === 1 &&
             teamMatePositionWhenPassing.position.x > 0 && // Teammate in the opponent area
             teamMatePositionWhenPassing.position.x > this.kicker.position.x && // Forward pass
-            opponentsPositionsWhenPassing.every((opponent) => opponent.position.x < teamMatePositionWhenPassing.position.x)
+            opponentsPositionsWhenPassing.every(
+              (opponent) => opponent.position && teamMatePositionWhenPassing.position && opponent.position.x < teamMatePositionWhenPassing.position.x,
+            )
           ) {
             this.offsideDetected(teamMatePositionWhenPassing);
             return true;
@@ -61,7 +63,9 @@ export class OffsidePlugin extends RoomPlugin {
             this.kicker.team === 2 &&
             teamMatePositionWhenPassing.position.x < 0 && // Teammate in the opponent area
             teamMatePositionWhenPassing.position.x < this.kicker.position.x && // Forward pass
-            opponentsPositionsWhenPassing.every((opponent) => opponent.position.x > teamMatePositionWhenPassing.position.x)
+            opponentsPositionsWhenPassing.every(
+              (opponent) => opponent.position && teamMatePositionWhenPassing.position && opponent.position.x > teamMatePositionWhenPassing.position.x,
+            )
           ) {
             this.offsideDetected(teamMatePositionWhenPassing);
             return true;
@@ -79,18 +83,23 @@ export class OffsidePlugin extends RoomPlugin {
   }
 
   private offsideDetected(offsidePlayer: PlayerObject) {
+    const offsidePosition = offsidePlayer.position;
+    if (!offsidePosition) {
+      return;
+    }
+
     this.room.sendAnnouncement(`🏁 ${offsidePlayer.name} is OFFSIDE on ${this.kicker!.name}'s pass !`, undefined, 0xff0000, "bold", 2);
     const playerRadius = this.room.getPlayerDiscProperties(offsidePlayer.id).radius;
 
     this.room.getPlayerList().forEach((player) => {
       if (player.team > 0) {
         // Every in-game player
-        if (player.team === this.kicker!.team) {
+        if (player.team === this.kicker!.team && player.position) {
           // Faulty team
           if (offsidePlayer.team === 1 ? player.position.x > 0 : player.position.x < 0) {
             // Every falty teammates behind midlane
             const minDistance = 15 * playerRadius;
-            const distanceBetweenMidlineAndFault = Math.abs(offsidePlayer.position.x);
+            const distanceBetweenMidlineAndFault = Math.abs(offsidePosition.x);
             const xPositionBeforeMidline = Math.max(minDistance - distanceBetweenMidlineAndFault, 0);
             this.room.setPlayerDiscProperties(player.id, { x: xPositionBeforeMidline * (offsidePlayer.team === 1 ? -1 : 1) });
           }
@@ -101,18 +110,18 @@ export class OffsidePlugin extends RoomPlugin {
     });
 
     // Ball replaced on offside
-    this.room.setDiscProperties(0, { x: offsidePlayer.position.x, y: offsidePlayer.position.y, xspeed: 0, yspeed: 0 });
+    this.room.setDiscProperties(0, { x: offsidePosition.x, y: offsidePosition.y, xspeed: 0, yspeed: 0 });
 
     // One player placed next to it
     const faultKicker = this.room
       .getPlayerList()
-      .filter((player) => player.team > 0 && player.team !== this.kicker!.team)
-      .sort((p1, p2) => p1.position.x - p2.position.x)
+      .filter((player) => player.team > 0 && player.team !== this.kicker!.team && player.position)
+      .sort((p1, p2) => p1.position!.x - p2.position!.x)
       .at(0);
     if (faultKicker) {
       this.room.setPlayerDiscProperties(faultKicker.id, {
-        x: offsidePlayer.position.x + this.room.getPlayerDiscProperties(offsidePlayer.id).radius * (offsidePlayer.team === 1 ? 2 : -2),
-        y: offsidePlayer.position.y,
+        x: offsidePosition.x + this.room.getPlayerDiscProperties(offsidePlayer.id).radius * (offsidePlayer.team === 1 ? 2 : -2),
+        y: offsidePosition.y,
       });
     }
   }

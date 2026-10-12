@@ -167,8 +167,8 @@ importers:
   .:
     devDependencies:
       '@types/haxball-headless-browser':
-        specifier: ^0.3.0
-        version: 0.3.0
+        specifier: ^0.5.0
+        version: 0.5.0
       '@types/node':
         specifier: ^24.0.0
         version: 24.19.2
@@ -272,8 +272,8 @@ packages:
   '@types/estree@1.0.9':
     resolution: {integrity: sha512-GhdPgy1el4/ImP05X05Uw4cw2/M93BCUmnEvWZNStlCzEKME4Fkk+YpoA5OiHNQmoS7Cafb8Xa3Pya8m1Qrzeg==}
 
-  '@types/haxball-headless-browser@0.3.0':
-    resolution: {integrity: sha512-8g86DmroSV/aXhVBuyLPPuOZvP5DXTgiKVzrCcK4F4SuqdbxEuqAR94dKY+mgDPTtLLfCqKpsNATuSbOsLd2Pg==}
+  '@types/haxball-headless-browser@0.5.0':
+    resolution: {integrity: sha512-zc6/ULLqtRo5wkibWwI5qDYTxr9lBR/uUQb3GdA7LSPAutzvEzHpy1seyXrnjoAzy6O7AoCyzLN2/eoWcMIuuQ==}
 
   '@types/json-schema@7.0.15':
     resolution: {integrity: sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA==}
@@ -1287,7 +1287,7 @@ snapshots:
 
   '@types/estree@1.0.9': {}
 
-  '@types/haxball-headless-browser@0.3.0': {}
+  '@types/haxball-headless-browser@0.5.0': {}
 
   '@types/json-schema@7.0.15': {}
 

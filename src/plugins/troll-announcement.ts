@@ -9,7 +9,7 @@ export class TrollAnnouncementPlugin extends RoomPlugin {
   public onTeamGoal(scoreHistory: PlayerScoreObject[]): void {
     if (isMatch(this.room)) {
       const scores = this.room.getScores();
-      if ((scores.red === 0 || scores.blue === 0) && (scores.scoreLimit - scores.red === 1 || scores.scoreLimit - scores.blue === 1)) {
+      if (scores && (scores.red === 0 || scores.blue === 0) && (scores.scoreLimit - scores.red === 1 || scores.scoreLimit - scores.blue === 1)) {
         this.timeout = window.setTimeout(() => {
           this.room.sendAnnouncement(`📢 Y'a des ${scores.blue === 0 ? "bleus" : "rouges"} ?`, undefined, 0xff00ff, "bold", 2);
         }, 1000);

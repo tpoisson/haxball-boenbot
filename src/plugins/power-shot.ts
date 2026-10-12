@@ -18,7 +18,7 @@ export class PowerShotPlugin extends RoomPlugin {
   private timePlayerBallTouch: number = 0;
 
   public onGameStart(byPlayer: PlayerObject): void {
-    this.ballColor = this.room.getDiscProperties(0).color;
+    this.ballColor = this.room.getDiscProperties(0)?.color;
   }
 
   public onGameOn(): void {
@@ -37,17 +37,26 @@ export class PowerShotPlugin extends RoomPlugin {
     this.hasKickedOff = false;
   }
 
-  public override onPlayerJoin(newPlayer: PlayerObject): void {
-    this.room.sendAnnouncement(`🚀 - ${this.powerShotConfig.enabled ? "Powershot enabled ✅" : "Powershot disabled ❌"}`, newPlayer.id, undefined, undefined, 0);
+  public override onPlayerJoin(newPlayer: PlayerJoinObject): void {
+    this.room.sendAnnouncement(
+      `🚀 - ${this.powerShotConfig.enabled ? "Powershot enabled ✅" : "Powershot disabled ❌"}`,
+      newPlayer.id,
+      undefined,
+      undefined,
+      0,
+    );
   }
 
   public onPlayerBallKick(byPlayer: PlayerObject): void {
     if (this.playerTouchingBall?.id === byPlayer.id && this.powerShotAvailable && this.powerShotConfig.enabled) {
-      this.room.setDiscProperties(0, {
-        xspeed: this.powerShotConfig.powerCoefficient * this.room.getDiscProperties(0).xspeed,
-        yspeed: this.powerShotConfig.powerCoefficient * this.room.getDiscProperties(0).yspeed,
-      });
-      this.powerShotAvailable = false;
+      const discProperties = this.room.getDiscProperties(0);
+      if (discProperties) {
+        this.room.setDiscProperties(0, {
+          xspeed: this.powerShotConfig.powerCoefficient * discProperties.xspeed,
+          yspeed: this.powerShotConfig.powerCoefficient * discProperties.yspeed,
+        });
+        this.powerShotAvailable = false;
+      }
     }
   }
 
