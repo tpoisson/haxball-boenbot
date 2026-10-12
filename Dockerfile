@@ -2,17 +2,19 @@ FROM node:24.21.0-alpine AS builder
 
 WORKDIR /app
 
-COPY package*.json /app
+RUN corepack enable
+
+COPY package.json pnpm-lock.yaml /app/
 
 # https://docs.docker.com/engine/reference/builder/#run---mounttypecache
-RUN --mount=type=cache,target=~/.npm,sharing=shared npm ci --no-audit --no-fund
+RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store,sharing=shared pnpm install --frozen-lockfile
 
 COPY tsconfig.json /app/
 COPY webpack.config.js /app
 
 COPY src /app/src
 
-RUN npm run build
+RUN pnpm run build
 
 FROM node:24.21.0-bookworm-slim
 
