@@ -56,7 +56,7 @@ RUN apt-get update -qq -y && \
     unzip \
     wget \
     xdg-utils
-RUN npx @puppeteer/browsers install chrome@115.0.5790.170
+RUN npx @puppeteer/browsers install chrome@157.0.8101.0
 
 WORKDIR /app
 
