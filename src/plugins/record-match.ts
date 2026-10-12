@@ -30,7 +30,7 @@ export class RecordMatchPlugin extends RoomPlugin {
 
   private async uploadData(recordingData: Uint8Array) {
     try {
-      const blob = new Blob([recordingData.buffer], { type: "application/octet-stream" });
+      const blob = new Blob([new Uint8Array(recordingData)], { type: "application/octet-stream" });
       const formData = new FormData();
       formData.append("file", blob, `HBReplay-${new Date().toISOString().replace(/[^0-9A-Z]/gi, "-")}.hbr2`);
       // https://anonymfile.com/docs/api

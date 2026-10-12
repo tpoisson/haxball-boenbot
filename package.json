@@ -6,11 +6,11 @@
     "clean": "rm -rf ./build"
   },
   "engines": {
-    "node": "20.18.0"
+    "node": "24.21.0"
   },
   "devDependencies": {
     "@types/haxball-headless-browser": "^0.3.0",
-    "@types/node": "^20.14.8",
+    "@types/node": "^24.0.0",
     "@typescript-eslint/eslint-plugin": "^6.2.0",
     "@typescript-eslint/parser": "^6.2.0",
     "eslint": "^8.46.0",

@@ -1,4 +1,4 @@
-FROM node:20.18.0-alpine3.20 AS builder
+FROM node:24.21.0-alpine AS builder
 
 WORKDIR /app
 
@@ -14,7 +14,7 @@ COPY src /app/src
 
 RUN npm run build
 
-FROM node:20.18-bookworm-slim
+FROM node:24.21.0-bookworm-slim
 
 RUN apt-get update -qq -y && \
     apt-get install -y \
@@ -51,6 +51,7 @@ RUN apt-get update -qq -y && \
     libxss1 \
     libxtst6 \
     lsb-release \
+    unzip \
     wget \
     xdg-utils
 RUN npx @puppeteer/browsers install chrome@115.0.5790.170
